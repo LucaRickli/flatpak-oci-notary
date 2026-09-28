@@ -1,13 +1,22 @@
 name: Release
 
+# - Pushes to main publish the rolling `edge` image.
+# - Publishing a GitHub release publishes the image tagged with the release's
+#   tag (plain `1.2.3` or `v1.2.3`, both work) and attaches static binaries to
+#   the release. Pre-releases only get their exact version tag.
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   image:
@@ -28,9 +37,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          # On release events the ref is refs/tags/<release tag>, which the
+          # semver rules parse with or without a leading "v". Stable releases
+          # also get `latest`; `{{major}}` is skipped for 0.x.
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/0.') && !startsWith(github.ref, 'refs/tags/v0.') }}
             type=edge,branch=main
             type=sha
       - uses: docker/build-push-action@v6
@@ -47,11 +60,13 @@ jobs:
           cache-to: type=gha,mode=max
 
   binaries:
-    name: Release binaries
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Attach binaries to release
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TAG: ${{ github.event.release.tag_name }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
@@ -66,11 +81,11 @@ jobs:
         run: |
           for arch in amd64 arm64; do
             CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath \
-              -ldflags "-s -w -X github.com/lucarickli/flatpak-oci-notary/internal/version.Version=${GITHUB_REF_NAME} -X github.com/lucarickli/flatpak-oci-notary/internal/version.Commit=${GITHUB_SHA}" \
+              -ldflags "-s -w -X github.com/lucarickli/flatpak-oci-notary/internal/version.Version=${TAG} -X github.com/lucarickli/flatpak-oci-notary/internal/version.Commit=${GITHUB_SHA}" \
               -o dist/notary-linux-$arch ./cmd/notary
           done
           (cd dist && sha256sum notary-* > SHA256SUMS)
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/* --clobber

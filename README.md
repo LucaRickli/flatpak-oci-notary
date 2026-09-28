@@ -117,5 +117,7 @@ Layout:
 
 CI (`.github/workflows`) lints the protos, checks that generated code is up to
 date, runs the Go and frontend checks and builds the multi-arch image. Pushes to
-`main` publish `ghcr.io/<owner>/flatpak-oci-notary:edge`. `v*` tags publish
-semver image tags and attach static binaries to a GitHub release.
+`main` publish `ghcr.io/<owner>/flatpak-oci-notary:edge`. Publishing a GitHub
+release with a semver tag (`1.2.3`, a leading `v` is optional) publishes the
+image as `1.2.3`, `1.2`, `1` and `latest`, and attaches static binaries to the
+release. Pre-releases (`1.3.0-rc.1`) only get their exact version tag.
