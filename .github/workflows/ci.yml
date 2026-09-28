@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generated:
+    name: Proto lint & generated code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - run: deno install --frozen
+        working-directory: frontend
+      - run: buf lint
+      - run: buf generate
+      - name: Generated code is up to date
+        run: git diff --exit-code -- internal/gen frontend/src/lib/api/gen
+
+  go:
+    name: Go vet & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l cmd internal frontend/*.go | tee /dev/stderr)"
+      - run: go vet -tags noui ./...
+      - run: go test -race -tags noui ./...
+
+  frontend:
+    name: Frontend check & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno install --frozen
+      - run: deno task check
+      - run: deno task build
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

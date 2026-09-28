@@ -1,0 +1,15 @@
+# Code generation with locally installed plugins (no BSR remote plugins).
+# Run `buf generate` from the repository root (requires `deno install` in frontend/).
+version: v2
+clean: true
+plugins:
+  - local: ["go", "tool", "protoc-gen-go"]
+    out: internal/gen
+    opt: paths=source_relative
+  - local: ["go", "tool", "protoc-gen-connect-go"]
+    out: internal/gen
+    opt: paths=source_relative
+  - local: frontend/node_modules/.bin/protoc-gen-es
+    out: frontend/src/lib/api/gen
+    opt: target=ts
+    include_imports: false

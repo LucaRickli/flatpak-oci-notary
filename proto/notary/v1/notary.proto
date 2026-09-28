@@ -1,0 +1,382 @@
+syntax = "proto3";
+
+package notary.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lucarickli/flatpak-oci-notary/internal/gen/notary/v1;notaryv1";
+
+// SystemService exposes server info and the current session. GetInfo and
+// GetMe are available without authentication.
+service SystemService {
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+  rpc GetMe(GetMeRequest) returns (GetMeResponse);
+  rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+// RegistryService manages upstream OCI registries that get indexed.
+service RegistryService {
+  rpc ListRegistries(ListRegistriesRequest) returns (ListRegistriesResponse);
+  rpc GetRegistry(GetRegistryRequest) returns (GetRegistryResponse);
+  rpc CreateRegistry(CreateRegistryRequest) returns (CreateRegistryResponse);
+  rpc UpdateRegistry(UpdateRegistryRequest) returns (UpdateRegistryResponse);
+  rpc DeleteRegistry(DeleteRegistryRequest) returns (DeleteRegistryResponse);
+  // Starts a sync in the background; poll GetRegistry for sync_state.
+  rpc SyncRegistry(SyncRegistryRequest) returns (SyncRegistryResponse);
+  // Tests connectivity and credentials without saving.
+  rpc TestRegistry(TestRegistryRequest) returns (TestRegistryResponse);
+}
+
+// ImageService browses indexed flatpak images.
+service ImageService {
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  rpc GetImage(GetImageRequest) returns (GetImageResponse);
+}
+
+// RepositoryService manages published flatpak repositories (indexes).
+service RepositoryService {
+  rpc ListRepositories(ListRepositoriesRequest) returns (ListRepositoriesResponse);
+  rpc GetRepository(GetRepositoryRequest) returns (GetRepositoryResponse);
+  rpc CreateRepository(CreateRepositoryRequest) returns (CreateRepositoryResponse);
+  rpc UpdateRepository(UpdateRepositoryRequest) returns (UpdateRepositoryResponse);
+  rpc DeleteRepository(DeleteRepositoryRequest) returns (DeleteRepositoryResponse);
+  // Returns exactly the images the index would serve for the given filters.
+  rpc PreviewRepository(PreviewRepositoryRequest) returns (PreviewRepositoryResponse);
+}
+
+// ---------------------------------------------------------------------------
+// System
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+  string version = 1;
+  // Base URL used for generated remote URLs, e.g. "https://flatpak.example.com".
+  string public_url = 2;
+  bool auth_enabled = 3;
+}
+
+message GetMeRequest {}
+
+message User {
+  string subject = 1;
+  string email = 2;
+  string name = 3;
+}
+
+message GetMeResponse {
+  bool authenticated = 1;
+  bool auth_enabled = 2;
+  // Unset when not authenticated or when auth is disabled.
+  User user = 3;
+}
+
+message GetOverviewRequest {}
+
+message GetOverviewResponse {
+  int32 registries = 1;
+  int32 repositories = 2;
+  int32 images = 3;
+  int32 apps = 4;
+  int32 runtimes = 5;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}
+
+// ---------------------------------------------------------------------------
+// Registries
+
+enum AuthType {
+  AUTH_TYPE_UNSPECIFIED = 0;
+  AUTH_TYPE_ANONYMOUS = 1;
+  // Username + password or token.
+  AUTH_TYPE_BASIC = 2;
+}
+
+enum SyncState {
+  SYNC_STATE_UNSPECIFIED = 0;
+  SYNC_STATE_NEVER = 1;
+  SYNC_STATE_SYNCING = 2;
+  SYNC_STATE_OK = 3;
+  SYNC_STATE_ERROR = 4;
+}
+
+message Registry {
+  int32 id = 1;
+  string name = 2;
+  // Base URL of the OCI registry, e.g. "https://ghcr.io".
+  string url = 3;
+  // Allow plain http and skip TLS verification.
+  bool insecure = 4;
+  AuthType auth_type = 5;
+  string username = 6;
+  // The password/token is write-only; this tells whether one is stored.
+  bool has_password = 7;
+  // Discover repositories via /v2/_catalog (not supported by ghcr.io, Docker Hub, ...).
+  bool use_catalog = 8;
+  // Explicit repository names to index, e.g. "myorg/org.example.App".
+  repeated string repositories = 9;
+  // Globs limiting catalog results ("*" matches any characters incl. "/", "?" one character). Empty = all.
+  repeated string repository_patterns = 10;
+  // Globs for tags to index. Empty = all tags.
+  repeated string tag_patterns = 11;
+  // 0 disables periodic sync (manual only).
+  int32 sync_interval_minutes = 12;
+  SyncState sync_state = 13;
+  google.protobuf.Timestamp last_sync_at = 14;
+  string last_sync_error = 15;
+  int64 last_sync_duration_ms = 16;
+  // Number of indexed flatpak images from this registry.
+  int32 image_count = 17;
+  // Number of distinct OCI repositories containing flatpak images.
+  int32 repository_count = 18;
+  google.protobuf.Timestamp created_at = 19;
+  google.protobuf.Timestamp updated_at = 20;
+}
+
+message RegistryInput {
+  string name = 1;
+  string url = 2;
+  bool insecure = 3;
+  AuthType auth_type = 4;
+  string username = 5;
+  // Unset keeps the stored password. Ignored for anonymous auth.
+  optional string password = 6;
+  bool use_catalog = 7;
+  repeated string repositories = 8;
+  repeated string repository_patterns = 9;
+  repeated string tag_patterns = 10;
+  int32 sync_interval_minutes = 11;
+}
+
+message ListRegistriesRequest {}
+
+message ListRegistriesResponse {
+  repeated Registry registries = 1;
+}
+
+message GetRegistryRequest {
+  int32 id = 1;
+}
+
+message GetRegistryResponse {
+  Registry registry = 1;
+}
+
+message CreateRegistryRequest {
+  RegistryInput registry = 1;
+}
+
+message CreateRegistryResponse {
+  Registry registry = 1;
+}
+
+message UpdateRegistryRequest {
+  int32 id = 1;
+  RegistryInput registry = 2;
+}
+
+message UpdateRegistryResponse {
+  Registry registry = 1;
+}
+
+message DeleteRegistryRequest {
+  int32 id = 1;
+}
+
+message DeleteRegistryResponse {}
+
+message SyncRegistryRequest {
+  int32 id = 1;
+}
+
+message SyncRegistryResponse {
+  Registry registry = 1;
+}
+
+message TestRegistryRequest {
+  RegistryInput registry = 1;
+  // Set to reuse the stored password of an existing registry.
+  optional int32 id = 2;
+}
+
+message TestRegistryResponse {
+  bool ok = 1;
+  string error = 2;
+  // Whether /v2/_catalog worked.
+  bool catalog_supported = 3;
+  // Up to 50 repository names from the catalog, if supported.
+  repeated string sample_repositories = 4;
+}
+
+// ---------------------------------------------------------------------------
+// Images
+
+enum RefKind {
+  REF_KIND_UNSPECIFIED = 0;
+  REF_KIND_APP = 1;
+  REF_KIND_RUNTIME = 2;
+}
+
+message Image {
+  int32 id = 1;
+  int32 registry_id = 2;
+  string registry_name = 3;
+  // OCI repository path on the registry, e.g. "myorg/org.example.App".
+  string repository = 4;
+  // Manifest digest ("sha256:...").
+  string digest = 5;
+  string media_type = 6;
+  string os = 7;
+  // OCI architecture, e.g. "amd64", "arm64".
+  string architecture = 8;
+  repeated string tags = 9;
+  // Full flatpak ref, e.g. "app/org.example.App/x86_64/stable".
+  string ref = 10;
+  RefKind kind = 11;
+  string flatpak_id = 12;
+  // Flatpak arch from the ref, e.g. "x86_64".
+  string arch = 13;
+  string branch = 14;
+  // From appstream metadata; may be empty.
+  string name = 15;
+  string summary = 16;
+  string version = 17;
+  int64 installed_size = 18;
+  int64 download_size = 19;
+  // Image creation time from the config, if known.
+  google.protobuf.Timestamp created = 20;
+  // Icon served at GET /icons/{id} when true.
+  bool has_icon = 21;
+  google.protobuf.Timestamp indexed_at = 22;
+}
+
+message ListImagesRequest {
+  // 0 = all registries.
+  int32 registry_id = 1;
+  // Free-text search in ref, name and repository.
+  string query = 2;
+  // Unspecified = all kinds.
+  RefKind kind = 3;
+}
+
+message ListImagesResponse {
+  repeated Image images = 1;
+}
+
+message GetImageRequest {
+  int32 id = 1;
+}
+
+message GetImageResponse {
+  Image image = 1;
+  // All labels from the image config (icon data URIs stripped).
+  map<string, string> labels = 2;
+  // Flatpak metadata keyfile from the org.flatpak.metadata label.
+  string metadata = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Repositories
+
+// A rule selecting images of the repository's registry. An image is served if
+// it matches at least one include rule and no exclude rule. Empty patterns
+// match everything.
+message Source {
+  // Glob on the OCI repository path ("*" matches any characters incl. "/").
+  string repository_pattern = 1;
+  // Glob on the flatpak ref, e.g. "app/org.gnome.*".
+  string ref_pattern = 2;
+  // Glob on tags; matches if any of the image's tags matches.
+  string tag_pattern = 3;
+  bool exclude = 4;
+}
+
+message RepositoryUrls {
+  // For `flatpak remote-add`, e.g. "oci+https://host/repo/stable".
+  string remote = 1;
+  // Downloadable .flatpakrepo file.
+  string flatpakrepo = 2;
+  // The index endpoint flatpak queries (without query parameters).
+  string index = 3;
+}
+
+message Repository {
+  int32 id = 1;
+  // URL-safe identifier: [a-z0-9][a-z0-9._-]*
+  string slug = 2;
+  string title = 3;
+  string description = 4;
+  string homepage = 5;
+  // A repository serves images of exactly one upstream registry, because the
+  // flatpak index format has a single "Registry" base URL.
+  int32 registry_id = 6;
+  string registry_name = 7;
+  repeated Source sources = 8;
+  // Images matched by the sources (all arches and tags, before per-ref de-duplication).
+  int32 image_count = 9;
+  RepositoryUrls urls = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message RepositoryInput {
+  string slug = 1;
+  string title = 2;
+  string description = 3;
+  string homepage = 4;
+  int32 registry_id = 5;
+  repeated Source sources = 6;
+}
+
+message ListRepositoriesRequest {}
+
+message ListRepositoriesResponse {
+  repeated Repository repositories = 1;
+}
+
+message GetRepositoryRequest {
+  int32 id = 1;
+}
+
+message GetRepositoryResponse {
+  Repository repository = 1;
+}
+
+message CreateRepositoryRequest {
+  RepositoryInput repository = 1;
+}
+
+message CreateRepositoryResponse {
+  Repository repository = 1;
+}
+
+message UpdateRepositoryRequest {
+  int32 id = 1;
+  RepositoryInput repository = 2;
+}
+
+message UpdateRepositoryResponse {
+  Repository repository = 1;
+}
+
+message DeleteRepositoryRequest {
+  int32 id = 1;
+}
+
+message DeleteRepositoryResponse {}
+
+message PreviewRepositoryRequest {
+  int32 id = 1;
+  // OCI architecture; empty = all.
+  string architecture = 2;
+  // Like flatpak's "#tag" remote suffix; empty = all tags. Flatpak's default is "latest".
+  string tag = 3;
+}
+
+message PreviewRepositoryResponse {
+  repeated Image images = 1;
+}
