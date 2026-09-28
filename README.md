@@ -28,11 +28,8 @@ flatpak ──GET /repo/<slug>/index/static──▶ notary ──indexes──�
   an ordered list of **source rules** (`repository`, `ref` and `tag` globs,
   include or exclude). An image is served if at least one include rule matches
   it and no exclude rule does. For example, include `myorg/*` and exclude
-  `app/org.example.Internal*`. If several images carry the same ref, the newest## License
-
-[MIT License](/LICENSE) - Copyright (c) 2026 lucarickli
-
-one is served.
+  `app/org.example.Internal*`. If several images carry the same ref, the newest
+  one is served.
 
 **One registry per repository.** Flatpak's index format has a single `Registry`
 base URL, and flatpak resolves every image name against it. A repository can
