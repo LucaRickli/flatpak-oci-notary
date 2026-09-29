@@ -19,7 +19,9 @@
 	import RepositoryPreview from '$lib/components/repository-preview.svelte';
 	import RepositoryFields, { type RepositoryMeta } from '$lib/components/repository-fields.svelte';
 	import SourcesEditor from '$lib/components/sources-editor.svelte';
-	import StatCard from '$lib/components/stat-card.svelte';
+	import CopyButton from '$lib/components/copy-button.svelte';
+	import PackageIcon from '$lib/components/package-icon.svelte';
+	import { imageHref } from '$lib/links';
 	import {
 		registryClient,
 		repositoryClient,
@@ -29,17 +31,32 @@
 	import { Resource } from '$lib/resource.svelte';
 	import { isNotFound, reportError } from '$lib/session.svelte';
 	import { setCrumb } from '$lib/breadcrumb.svelte';
-	import { formatDate, formatRelative, SLUG_PATTERN } from '$lib/format';
+	import { formatDate, formatRelative, imageTitle, SLUG_PATTERN } from '$lib/format';
 	import { sameSources, toDraft, type SourceDraft } from '$lib/sources';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import ServerIcon from '@lucide/svelte/icons/server';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import LibraryIcon from '@lucide/svelte/icons/library';
+	import TerminalIcon from '@lucide/svelte/icons/terminal';
+	import ListFilterIcon from '@lucide/svelte/icons/list-filter';
+	import EyeIcon from '@lucide/svelte/icons/eye';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import { remoteAddCommand } from '$lib/remote';
 
 	let { data } = $props();
 
 	const resource = new Resource(async () => (await repositoryClient.getRepository({ id: data.id })).repository);
 	const registries = new Resource(async () => (await registryClient.listRegistries({})).registries);
 	const repository = $derived(resource.current?.id === data.id ? resource.current : undefined);
+
+	// A glimpse of what the remote serves (default client view: amd64, tag latest).
+	const sample = new Resource(async () => {
+		const id = data.id;
+		void revision;
+		const res = await repositoryClient.previewRepository({ id, architecture: 'amd64', tag: 'latest', pageSize: 12 });
+		return { ...res, id };
+	});
+	const sampleImages = $derived(sample.current?.id === data.id ? sample.current.images : undefined);
 
 	const TABS = ['overview', 'rules', 'preview', 'settings'];
 	const initialTab = page.url.searchParams.get('tab') ?? '';
@@ -148,13 +165,26 @@
 	<Skeleton class="h-72 rounded-xl" />
 {:else}
 	<PageHeader title={repository.title || repository.slug} description={repository.description}>
+		{#snippet media()}
+			<div class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-success/12 text-success md:size-14">
+				<LibraryIcon class="size-6" />
+			</div>
+		{/snippet}
 		<div class="flex flex-wrap items-center gap-1.5 pt-1">
-			<Badge variant="outline" class="font-mono">{repository.slug}</Badge>
-			<Badge variant="secondary" href="/registries/{repository.registryId}">
+			<Badge variant="muted" class="font-mono">{repository.slug}</Badge>
+			<Badge variant="outline" href="/registries/{repository.registryId}">
 				<ServerIcon data-icon="inline-start" />{repository.registryName}
 			</Badge>
+			{#if repository.homepage}
+				<Badge variant="outline" href={repository.homepage} target="_blank" rel="external noopener">
+					<ExternalLinkIcon data-icon="inline-start" />Homepage
+				</Badge>
+			{/if}
 		</div>
 		{#snippet actions()}
+			{#if repository.urls?.remote}
+				<CopyButton value={remoteAddCommand(repository)} label="Copy remote-add" showLabel variant="outline" size="default" />
+			{/if}
 			<ConfirmDelete
 				title="Delete {repository.title || repository.slug}?"
 				description="The remote stops working for everyone who added it. Images on the registry are not touched."
@@ -164,34 +194,76 @@
 	</PageHeader>
 
 	<Tabs.Root bind:value={tab}>
-		<Tabs.List>
-			<Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-			<Tabs.Trigger value="rules">
-				Rules
+		<Tabs.List variant="line" class="w-full justify-start overflow-x-auto border-b">
+			<Tabs.Trigger value="overview" class="flex-none max-sm:[&>svg]:hidden"><TerminalIcon />Overview</Tabs.Trigger>
+			<Tabs.Trigger value="rules" class="flex-none max-sm:[&>svg]:hidden">
+				<ListFilterIcon />Rules
 				{#if rulesDirty}<span class="size-1.5 rounded-full bg-primary" aria-label="unsaved changes"></span>{/if}
 			</Tabs.Trigger>
-			<Tabs.Trigger value="preview">Preview</Tabs.Trigger>
-			<Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+			<Tabs.Trigger value="preview" class="flex-none max-sm:[&>svg]:hidden"><EyeIcon />Preview</Tabs.Trigger>
+			<Tabs.Trigger value="settings" class="flex-none max-sm:[&>svg]:hidden"><SettingsIcon />Settings</Tabs.Trigger>
 		</Tabs.List>
 
 		<Tabs.Content value="overview" class="flex flex-col gap-4 pt-2">
-			<div class="grid gap-4 sm:grid-cols-3">
-				<StatCard label="Images matched" value={repository.imageCount}>All arches and tags, before per-ref de-duplication</StatCard>
-				<StatCard label="Rules" value={repository.sources.length}>
-					{repository.sources.filter((s) => s.exclude).length} exclude
-				</StatCard>
-				<StatCard label="Last updated" value={formatRelative(repository.updatedAt)}>
-					Created {formatDate(repository.createdAt)}
-				</StatCard>
+			<Card.Root class="py-0">
+				<dl class="grid grid-cols-3 divide-x">
+					<div class="flex min-w-0 flex-col gap-0.5 p-4">
+						<dt class="text-xs font-medium text-muted-foreground">Images matched</dt>
+						<dd class="text-2xl font-semibold tabular-nums">{repository.imageCount.toLocaleString()}</dd>
+					</div>
+					<div class="flex min-w-0 flex-col gap-0.5 p-4">
+						<dt class="text-xs font-medium text-muted-foreground">Rules</dt>
+						<dd class="text-2xl font-semibold tabular-nums">
+							{repository.sources.length}
+							{#if repository.sources.some((s) => s.exclude)}
+								<span class="text-xs font-normal text-muted-foreground">
+									{repository.sources.filter((s) => s.exclude).length} exclude
+								</span>
+							{/if}
+						</dd>
+					</div>
+					<div class="flex min-w-0 flex-col gap-0.5 p-4">
+						<dt class="text-xs font-medium text-muted-foreground">Updated</dt>
+						<dd class="truncate text-base font-semibold" title="Created {formatDate(repository.createdAt)}">
+							{formatRelative(repository.updatedAt)}
+						</dd>
+					</div>
+				</dl>
+			</Card.Root>
+			<div class="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-start">
+				<RepositoryUsage {repository} />
+				<Card.Root class="gap-3">
+					<Card.Header>
+						<Card.Title>Served</Card.Title>
+						<Card.Description>amd64 · latest</Card.Description>
+						<Card.Action>
+							<Button variant="ghost" size="sm" onclick={() => (tab = 'preview')}>Preview</Button>
+						</Card.Action>
+					</Card.Header>
+					<Card.Content>
+						{#if !sampleImages}
+							<Skeleton class="h-32 rounded-lg" />
+						{:else if sampleImages.length === 0}
+							<p class="text-sm text-muted-foreground">Nothing yet.</p>
+						{:else}
+							<ul class="grid grid-cols-4 gap-2">
+								{#each sampleImages as image (image.id)}
+									<li>
+										<a
+											href={imageHref(image)}
+											class="flex flex-col items-center gap-1 rounded-lg p-1.5 text-center hover:bg-muted/60"
+											title={image.ref}
+										>
+											<PackageIcon {image} class="size-10 rounded-lg bg-transparent" />
+											<span class="line-clamp-1 w-full text-[0.7rem]">{imageTitle(image)}</span>
+										</a>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</Card.Content>
+				</Card.Root>
 			</div>
-			<RepositoryUsage {repository} />
-			{#if repository.homepage}
-				<div>
-					<Button variant="link" href={repository.homepage} target="_blank" rel="external noopener" class="px-0">
-						<ExternalLinkIcon data-icon="inline-start" />{repository.homepage}
-					</Button>
-				</div>
-			{/if}
 		</Tabs.Content>
 
 		<Tabs.Content value="rules" class="pt-2">

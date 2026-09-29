@@ -1,31 +1,30 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import * as Item from '$lib/components/ui/item';
 	import * as Empty from '$lib/components/ui/empty';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import PageHeader from '$lib/components/page-header.svelte';
-	import StatCard from '$lib/components/stat-card.svelte';
-	import SyncStateBadge from '$lib/components/sync-state-badge.svelte';
-	import SyncProgress from '$lib/components/sync-progress.svelte';
 	import ExternalSyncNote from '$lib/components/external-sync-note.svelte';
 	import ErrorAlert from '$lib/components/error-alert.svelte';
-	import CopyButton from '$lib/components/copy-button.svelte';
-	import { registryClient, repositoryClient, systemClient, type Registry } from '$lib/api';
+	import RegistriesTable from '$lib/components/registries-table.svelte';
+	import RepositoriesTable from '$lib/components/repositories-table.svelte';
+	import { imageClient, RefKind, registryClient, repositoryClient, systemClient, type Registry } from '$lib/api';
+	import PackageIconView from '$lib/components/package-icon.svelte';
+	import { packageHref } from '$lib/links';
+	import { packageTitle } from '$lib/format';
 	import { Resource } from '$lib/resource.svelte';
 	import { onSyncEnded, poll } from '$lib/poll.svelte';
-	import { isQueued, isSyncing, POLL_LIST_MS, startSync, syncAction, syncPollInterval } from '$lib/sync';
-	import { formatRelative } from '$lib/format';
+	import { isSyncing, POLL_LIST_MS, startSync, syncPollInterval } from '$lib/sync';
 	import { cn } from '$lib/utils/shadcn';
 	import ServerIcon from '@lucide/svelte/icons/server';
 	import PackageIcon from '@lucide/svelte/icons/package';
 	import LibraryIcon from '@lucide/svelte/icons/library';
-	import AppWindowIcon from '@lucide/svelte/icons/app-window';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
-	import CircleIcon from '@lucide/svelte/icons/circle';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
+	const showcase = new Resource(() => imageClient.listPackages({ kind: RefKind.APP, pageSize: 12 }));
 	const overview = new Resource(() => systemClient.getOverview({}));
 	const registries = new Resource(async () => (await registryClient.listRegistries({})).registries);
 	const repositories = new Resource(async () => (await repositoryClient.listRepositories({})).repositories);
@@ -42,6 +41,7 @@
 		() => {
 			overview.poll();
 			repositories.poll();
+			showcase.poll();
 		}
 	);
 
@@ -53,150 +53,202 @@
 	}
 
 	const steps = $derived([
-		{ done: (overview.current?.registries ?? 0) > 0, title: 'Add a registry', text: 'Connect ghcr.io, a Fedora or any other OCI registry.', href: '/registries/new', cta: 'Add registry' },
-		{ done: (overview.current?.images ?? 0) > 0, title: 'Index flatpaks', text: 'Sync the registry to discover images labelled with org.flatpak.ref.', href: '/registries', cta: 'Open registries' },
-		{ done: (overview.current?.repositories ?? 0) > 0, title: 'Publish a repository', text: 'Pick packages and share the remote-add command.', href: '/repositories/new', cta: 'New repository' }
+		{ done: (overview.current?.registries ?? 0) > 0, title: 'Add a registry', text: 'ghcr.io, Fedora or any OCI registry.', href: '/registries/new', cta: 'Add registry' },
+		{ done: (overview.current?.images ?? 0) > 0, title: 'Index flatpaks', text: 'Sync it to discover flatpak images.', href: '/registries', cta: 'Open registries' },
+		{ done: (overview.current?.repositories ?? 0) > 0, title: 'Publish a repository', text: 'Serve a flatpak remote.', href: '/repositories/new', cta: 'New repository' }
 	]);
 	const setupDone = $derived(steps.every((s) => s.done));
+
+	const o = $derived(overview.current);
+	const stats = $derived([
+		{
+			label: 'Packages',
+			href: '/packages',
+			icon: LayoutGridIcon,
+			tone: 'bg-primary/10 text-primary',
+			value: o ? (o.apps + o.runtimes).toLocaleString() : undefined,
+			sub: o ? `${o.apps.toLocaleString()} apps · ${o.runtimes.toLocaleString()} runtimes` : ''
+		},
+		{
+			label: 'Images',
+			href: '/packages',
+			icon: PackageIcon,
+			tone: 'bg-chart-2/15 text-chart-2',
+			value: o?.images.toLocaleString(),
+			sub: 'All arches and tags'
+		},
+		{
+			label: 'Registries',
+			href: '/registries',
+			icon: ServerIcon,
+			tone: 'bg-warning/12 text-warning',
+			value: o?.registries.toLocaleString(),
+			sub: anySyncing ? 'Syncing now' : 'Upstream sources'
+		},
+		{
+			label: 'Repositories',
+			href: '/repositories',
+			icon: LibraryIcon,
+			tone: 'bg-success/12 text-success',
+			value: o?.repositories.toLocaleString(),
+			sub: 'Published remotes'
+		}
+	]);
 </script>
 
-<PageHeader title="Dashboard" description="Flatpak remotes backed by OCI registries." />
+<PageHeader title="Overview" description="Flatpak remotes backed by OCI registries.">
+	{#snippet actions()}
+		<Button variant="outline" href="/registries/new"><PlusIcon data-icon="inline-start" />Add registry</Button>
+		<Button href="/repositories/new" disabled={registries.current?.length === 0}>
+			<PlusIcon data-icon="inline-start" />New repository
+		</Button>
+	{/snippet}
+</PageHeader>
 
 {#if overview.error}
 	<ErrorAlert error={overview.error} onretry={overview.refresh} />
 {/if}
 
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-	<StatCard label="Registries" icon={ServerIcon} href="/registries" value={overview.current?.registries} />
-	<StatCard label="Images" icon={PackageIcon} href="/packages" value={overview.current?.images}>
-		Flatpak images, all arches and tags
-	</StatCard>
-	<StatCard label="Apps / runtimes" icon={AppWindowIcon} href="/packages?kind=app" value={overview.current ? `${overview.current.apps} / ${overview.current.runtimes}` : undefined} />
-	<StatCard label="Repositories" icon={LibraryIcon} href="/repositories" value={overview.current?.repositories} />
-</div>
+<Card.Root class="py-0">
+	<div class="grid grid-cols-2 divide-border lg:grid-cols-4 lg:divide-x [&>*:nth-child(-n+2)]:max-lg:border-b [&>*:nth-child(odd)]:max-lg:border-r">
+		{#each stats as stat (stat.label)}
+			<a href={stat.href} class="group flex items-center gap-3 p-4 transition-colors hover:bg-muted/50 md:p-5">
+				<div class={cn('hidden size-10 shrink-0 items-center justify-center rounded-xl sm:flex', stat.tone)}>
+					<stat.icon class="size-5" />
+				</div>
+				<div class="flex min-w-0 flex-col">
+					<span class="text-xs font-medium text-muted-foreground">{stat.label}</span>
+					{#if stat.value === undefined}
+						<Skeleton class="my-1 h-7 w-12" />
+					{:else}
+						<span class="text-2xl font-semibold tabular-nums">{stat.value}</span>
+					{/if}
+					<span class="truncate text-xs text-muted-foreground">{stat.sub}</span>
+				</div>
+			</a>
+		{/each}
+	</div>
+</Card.Root>
 
 {#if overview.current && !setupDone}
-	<Card.Root>
+	<Card.Root class="gap-3">
 		<Card.Header>
 			<Card.Title>Get started</Card.Title>
-			<Card.Description>Three steps to serve flatpaks from an OCI registry.</Card.Description>
 		</Card.Header>
-		<Card.Content class="grid gap-3 md:grid-cols-3">
-			{#each steps as step, i (step.title)}
-				<Item.Root variant="outline" class="items-start">
-					<Item.Media variant="icon" class={cn(step.done ? 'text-primary' : 'text-muted-foreground')}>
-						{#if step.done}<CircleCheckIcon />{:else}<CircleIcon />{/if}
-					</Item.Media>
-					<Item.Content>
-						<Item.Title>{i + 1}. {step.title}</Item.Title>
-						<Item.Description>{step.text}</Item.Description>
+		<Card.Content>
+			<ol class="grid gap-3 md:grid-cols-3">
+				{#each steps as step, i (step.title)}
+					<li
+						class={cn(
+							'flex items-center gap-3 rounded-lg border p-3',
+							step.done && 'border-transparent bg-success/8'
+						)}
+					>
+						<div
+							class={cn(
+								'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
+								step.done ? 'bg-success text-background' : 'bg-primary/10 text-primary'
+							)}
+						>
+							{#if step.done}<CircleCheckIcon class="size-4" />{:else}{i + 1}{/if}
+						</div>
+						<div class="flex min-w-0 flex-1 flex-col">
+							<span class="text-sm font-medium">{step.title}</span>
+							<span class="truncate text-xs text-muted-foreground">{step.text}</span>
+						</div>
 						{#if !step.done}
-							<div class="pt-2"><Button size="sm" variant="outline" href={step.href}>{step.cta}</Button></div>
+							<Button size="icon-sm" variant="ghost" href={step.href} aria-label={step.cta}><ArrowRightIcon /></Button>
 						{/if}
-					</Item.Content>
-				</Item.Root>
-			{/each}
+					</li>
+				{/each}
+			</ol>
 		</Card.Content>
 	</Card.Root>
 {/if}
 
-<div class="grid gap-4 lg:grid-cols-2">
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Registry status</Card.Title>
-			<Card.Description>Indexing state of the upstream registries.</Card.Description>
-			<Card.Action><Button variant="ghost" size="sm" href="/registries">View all</Button></Card.Action>
-		</Card.Header>
-		<Card.Content class="flex flex-col gap-2">
-			{#if registries.error}
-				<ErrorAlert error={registries.error} onretry={registries.refresh} />
-			{:else if !registries.current}
-				{#each { length: 3 }, i (i)}<Skeleton class="h-14 rounded-lg" />{/each}
-			{:else if registries.current.length === 0}
-				<Empty.Root class="p-6 md:p-6">
-					<Empty.Header>
-						<Empty.Title>No registries</Empty.Title>
-						<Empty.Description>Add a registry to start indexing flatpaks.</Empty.Description>
-					</Empty.Header>
-					<Empty.Content>
-						<Button size="sm" href="/registries/new"><PlusIcon data-icon="inline-start" />Add registry</Button>
-					</Empty.Content>
-				</Empty.Root>
-			{:else}
-				{#each registries.current as registry (registry.id)}
-					{@const syncing = isSyncing(registry)}
-					{@const action = syncAction(registry)}
-					<Item.Root variant="outline" size="sm">
-						<Item.Content class="min-w-0">
-							<Item.Title class="w-full">
-								<a href="/registries/{registry.id}" class="truncate hover:underline">{registry.name}</a>
-							</Item.Title>
-							<Item.Description class="truncate">
-								{registry.imageCount} images · synced {formatRelative(registry.lastSyncAt)}
-							</Item.Description>
-							<SyncProgress {registry} class="w-full max-w-64 pt-1" />
-						</Item.Content>
-						<Item.Actions>
-							<SyncStateBadge {registry} />
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								aria-label="{action.label}: {registry.name}"
-								title={action.label}
-								disabled={syncing || isQueued(registry)}
-								onclick={() => sync(registry)}
-							>
-								<RefreshCwIcon class={cn(syncing && 'animate-spin')} />
-							</Button>
-						</Item.Actions>
-					</Item.Root>
-				{/each}
-				<ExternalSyncNote class="pt-1" />
-			{/if}
-		</Card.Content>
-	</Card.Root>
+<div class="grid gap-6 xl:grid-cols-2">
+	<section class="flex min-w-0 flex-col gap-3" aria-labelledby="registries-heading">
+		<div class="flex items-center justify-between">
+			<h2 id="registries-heading" class="text-base font-semibold">Registries</h2>
+			<Button variant="ghost" size="sm" href="/registries">View all<ArrowRightIcon data-icon="inline-end" /></Button>
+		</div>
+		{#if registries.error}
+			<ErrorAlert error={registries.error} onretry={registries.refresh} />
+		{:else if !registries.current}
+			<Skeleton class="h-40 rounded-xl" />
+		{:else if registries.current.length === 0}
+			<Empty.Root class="border border-dashed p-6 md:p-6">
+				<Empty.Header>
+					<Empty.Media variant="icon"><ServerIcon /></Empty.Media>
+					<Empty.Title>No registries</Empty.Title>
+				</Empty.Header>
+				<Empty.Content>
+					<Button size="sm" href="/registries/new"><PlusIcon data-icon="inline-start" />Add registry</Button>
+				</Empty.Content>
+			</Empty.Root>
+		{:else}
+			<Card.Root class="py-0">
+				<RegistriesTable registries={registries.current} onsync={sync} compact />
+			</Card.Root>
+			<ExternalSyncNote />
+		{/if}
+	</section>
 
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Repositories</Card.Title>
-			<Card.Description>Published flatpak remotes.</Card.Description>
-			<Card.Action><Button variant="ghost" size="sm" href="/repositories">View all</Button></Card.Action>
-		</Card.Header>
-		<Card.Content class="flex flex-col gap-2">
-			{#if repositories.error}
-				<ErrorAlert error={repositories.error} onretry={repositories.refresh} />
-			{:else if !repositories.current}
-				{#each { length: 3 }, i (i)}<Skeleton class="h-14 rounded-lg" />{/each}
-			{:else if repositories.current.length === 0}
-				<Empty.Root class="p-6 md:p-6">
-					<Empty.Header>
-						<Empty.Title>No repositories</Empty.Title>
-						<Empty.Description>Publish a remote with a selection of indexed packages.</Empty.Description>
-					</Empty.Header>
-					<Empty.Content>
-						<Button size="sm" href="/repositories/new" disabled={registries.current?.length === 0}>
-							<PlusIcon data-icon="inline-start" />New repository
-						</Button>
-					</Empty.Content>
-				</Empty.Root>
-			{:else}
-				{#each repositories.current as repo (repo.id)}
-					<Item.Root variant="outline" size="sm">
-						<Item.Content class="min-w-0">
-							<Item.Title class="w-full">
-								<a href="/repositories/{repo.id}" class="truncate hover:underline">{repo.title || repo.slug}</a>
-							</Item.Title>
-							<Item.Description class="truncate font-mono text-xs">{repo.urls?.remote}</Item.Description>
-						</Item.Content>
-						<Item.Actions>
-							<span class="text-xs text-muted-foreground">{repo.imageCount} images</span>
-							{#if repo.urls?.remote}
-								<CopyButton value={`flatpak remote-add --if-not-exists --no-gpg-verify ${repo.slug} ${repo.urls.remote}`} label="Copy remote-add command" />
-							{/if}
-						</Item.Actions>
-					</Item.Root>
-				{/each}
-			{/if}
-		</Card.Content>
-	</Card.Root>
+	<section class="flex min-w-0 flex-col gap-3" aria-labelledby="repositories-heading">
+		<div class="flex items-center justify-between">
+			<h2 id="repositories-heading" class="text-base font-semibold">Repositories</h2>
+			<Button variant="ghost" size="sm" href="/repositories">View all<ArrowRightIcon data-icon="inline-end" /></Button>
+		</div>
+		{#if repositories.error}
+			<ErrorAlert error={repositories.error} onretry={repositories.refresh} />
+		{:else if !repositories.current}
+			<Skeleton class="h-40 rounded-xl" />
+		{:else if repositories.current.length === 0}
+			<Empty.Root class="border border-dashed p-6 md:p-6">
+				<Empty.Header>
+					<Empty.Media variant="icon"><LibraryIcon /></Empty.Media>
+					<Empty.Title>No repositories</Empty.Title>
+				</Empty.Header>
+				<Empty.Content>
+					<Button size="sm" href="/repositories/new" disabled={registries.current?.length === 0}>
+						<PlusIcon data-icon="inline-start" />New repository
+					</Button>
+				</Empty.Content>
+			</Empty.Root>
+		{:else}
+			<Card.Root class="py-0">
+				<RepositoriesTable repositories={repositories.current} compact />
+			</Card.Root>
+		{/if}
+	</section>
 </div>
+
+{#if showcase.current && showcase.current.packages.length > 0}
+	<section class="flex flex-col gap-3" aria-labelledby="catalog-heading">
+		<div class="flex items-center justify-between">
+			<h2 id="catalog-heading" class="text-base font-semibold">Apps in the catalog</h2>
+			<Button variant="ghost" size="sm" href="/packages?kind=app">Browse<ArrowRightIcon data-icon="inline-end" /></Button>
+		</div>
+		<Card.Root>
+			<Card.Content>
+				<ul class="grid grid-cols-4 gap-x-1 gap-y-3 md:grid-cols-6 max-md:[&>li:nth-child(n+9)]:hidden">
+					{#each showcase.current.packages as pkg (pkg.flatpakId)}
+						<li>
+							<a
+								href={packageHref(pkg.kind, pkg.flatpakId)}
+								class="group flex flex-col items-center gap-2 rounded-lg p-2 text-center transition-colors hover:bg-muted/60"
+							>
+								<PackageIconView
+									iconId={pkg.iconImageId}
+									alt=""
+									class="size-14 rounded-xl bg-transparent transition-transform group-hover:scale-105"
+								/>
+								<span class="line-clamp-1 w-full text-xs font-medium">{packageTitle(pkg)}</span>
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</Card.Content>
+		</Card.Root>
+	</section>
+{/if}

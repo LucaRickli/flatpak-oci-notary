@@ -20,7 +20,7 @@
 	const visible = $derived(expanded ? missing : missing.slice(0, COLLAPSED));
 </script>
 
-<Alert.Root class="border-amber-500/40 *:[svg]:text-amber-600 dark:*:[svg]:text-amber-500">
+<Alert.Root class="border-warning/40 bg-warning/5 *:[svg]:text-warning">
 	<TriangleAlertIcon />
 	<Alert.Title>
 		{missing.length}
@@ -28,15 +28,13 @@
 	</Alert.Title>
 	<Alert.Description class="flex flex-col gap-3">
 		<div>
-			Installing the flatpaks below fails unless the client has another remote providing the runtime (apps need their
-			runtime, and so do runtimes and extensions that download extra data). Include it in the rules if
-			{registryName || 'the registry'} has it, publish a repository for a registry that has it, or tell users to add a
-			remote that provides it.
+			Installs of the flatpaks marked below fail unless clients have another remote providing the runtime. Include it
+			in the rules if {registryName || 'the registry'} has it, or publish a repository for a registry that does.
 		</div>
-		<ul class="flex w-full flex-col divide-y rounded-md border">
+		<ul class="flex w-full flex-col divide-y rounded-md border bg-background">
 			{#each visible as item (item.runtime)}
 				{@const href = refHref(item.runtime)}
-				<li class="flex min-w-0 flex-col gap-1.5 p-3">
+				<li class="flex min-w-0 flex-col gap-1 px-3 py-2">
 					{#if href}
 						<a {href} class="font-mono text-xs font-medium break-all text-foreground hover:underline">{item.runtime}</a>
 					{:else}
@@ -62,7 +60,7 @@
 							{/each}
 						</div>
 					{:else}
-						<span class="text-xs">Not indexed in any other registry: clients need a remote that provides it.</span>
+						<span class="text-xs">Not indexed in any registry</span>
 					{/if}
 				</li>
 			{/each}

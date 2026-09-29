@@ -33,8 +33,8 @@
 
 <Table.Root>
 	<Table.Header>
-		<Table.Row>
-			<Table.Head>Package</Table.Head>
+		<Table.Row class="hover:bg-transparent">
+			<Table.Head class="pl-4">Package</Table.Head>
 			<Table.Head>Kind</Table.Head>
 			<Table.Head class="hidden md:table-cell">Arch</Table.Head>
 			<Table.Head class="hidden md:table-cell">Branch</Table.Head>
@@ -42,15 +42,15 @@
 			<Table.Head class="hidden xl:table-cell">Version</Table.Head>
 			<Table.Head class="hidden text-right lg:table-cell">Download</Table.Head>
 			<Table.Head class="hidden text-right xl:table-cell">Installed</Table.Head>
-			<Table.Head class="hidden 2xl:table-cell">{showRegistry ? 'Source' : 'Repository'}</Table.Head>
+			<Table.Head class="hidden pr-4 2xl:table-cell">{showRegistry ? 'Source' : 'Repository'}</Table.Head>
 		</Table.Row>
 	</Table.Header>
 	<Table.Body>
 		{#each images as image (image.id)}
 			{@const href = imageHref(image)}
 			{@const runtimeMissing = !!image.runtime && !!missingRuntimes?.get(image.runtime)?.has(image.flatpakId)}
-			<Table.Row class="cursor-pointer" onclick={rowClick(() => goto(href))}>
-				<Table.Cell class="max-w-56 sm:max-w-80">
+			<Table.Row class="h-14 cursor-pointer" onclick={rowClick(() => goto(href))}>
+				<Table.Cell class="max-w-56 pl-4 sm:max-w-80">
 					<div class="flex items-center gap-3">
 						<PackageIcon {image} />
 						<div class="flex min-w-0 flex-col">
@@ -62,7 +62,7 @@
 											{#snippet child({ props })}
 												<span
 													{...props}
-													class="inline-flex shrink-0 text-amber-600 dark:text-amber-500"
+													class="inline-flex shrink-0 text-warning"
 													aria-label="Runtime not served"
 												>
 													<TriangleAlertIcon class="size-3.5" />
@@ -77,7 +77,9 @@
 								<ExtraDataBadge hasExtraData={image.hasExtraData} />
 							</div>
 							<span class="truncate text-xs text-muted-foreground" title={image.ref}>
-								{image.summary || image.ref}
+								<!-- Arch and branch columns are hidden on small screens. -->
+								<span class="font-mono md:hidden">{image.arch || image.architecture}/{image.branch} · </span>{image.summary ||
+									image.ref}
 							</span>
 						</div>
 					</div>
@@ -88,7 +90,7 @@
 				<Table.Cell class="hidden lg:table-cell">
 					<div class="flex flex-wrap gap-1">
 						{#each image.tags.slice(0, MAX_TAGS) as tag (tag)}
-							<Badge variant="outline" class="font-mono">{tag}</Badge>
+							<Badge variant="muted" class="font-mono">{tag}</Badge>
 						{/each}
 						{#if image.tags.length > MAX_TAGS}
 							<Badge variant="ghost" title={image.tags.slice(MAX_TAGS).join(', ')}>
@@ -104,7 +106,7 @@
 				<Table.Cell class="hidden text-right tabular-nums xl:table-cell">
 					{formatBytes(image.installedSize)}
 				</Table.Cell>
-				<Table.Cell class="hidden max-w-64 2xl:table-cell">
+				<Table.Cell class="hidden max-w-64 pr-4 2xl:table-cell">
 					<div class="flex min-w-0 flex-col">
 						{#if showRegistry}<span class="truncate text-sm">{image.registryName}</span>{/if}
 						<span class="truncate font-mono text-xs text-muted-foreground">{image.repository}</span>

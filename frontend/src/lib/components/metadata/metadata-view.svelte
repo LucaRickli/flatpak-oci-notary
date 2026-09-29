@@ -17,7 +17,16 @@
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import FileCodeIcon from '@lucide/svelte/icons/file-code';
 
-	let { metadata, image }: { metadata: string; image: Image } = $props();
+	let {
+		metadata,
+		image,
+		raw = true
+	}: {
+		metadata: string;
+		image: Image;
+		/** Include the collapsible raw metadata (off when the page shows it elsewhere). */
+		raw?: boolean;
+	} = $props();
 
 	const kind = $derived<FlatpakKind | undefined>(
 		image.kind === RefKind.APP ? 'app' : image.kind === RefKind.RUNTIME ? 'runtime' : undefined
@@ -76,14 +85,13 @@
 		</Alert.Root>
 	{:else if meta}
 		<div class="grid gap-4 lg:grid-cols-2 lg:items-start">
-			<InstallSummary {meta} {image} />
+			<PermissionsCard {meta} />
 			<div class="flex flex-col gap-4">
+				<InstallSummary {meta} {image} />
 				<Card.Root>
 					<Card.Header>
 						<Card.Title>{title}</Card.Title>
-						<Card.Description>
-							From the [{meta.mainGroup ?? 'Application'}] group of the metadata.
-						</Card.Description>
+						<Card.Description>[{meta.mainGroup ?? 'Application'}] group</Card.Description>
 					</Card.Header>
 					<Card.Content>
 						{#if !meta.mainGroup}
@@ -140,12 +148,11 @@
 						{/if}
 					</Card.Content>
 				</Card.Root>
-				<PermissionsCard {meta} />
 			</div>
 		</div>
 	{/if}
 
-	{#if !empty}
+	{#if !empty && raw}
 		<Card.Root size="sm">
 			<Card.Header>
 				<Card.Title>Raw metadata</Card.Title>

@@ -31,7 +31,8 @@
 
 <div
 	class={cn(
-		'flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground',
+		'flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md',
+		src && !failed ? 'bg-muted' : 'bg-linear-to-br from-primary/15 to-primary/5 text-primary/70',
 		className
 	)}
 >

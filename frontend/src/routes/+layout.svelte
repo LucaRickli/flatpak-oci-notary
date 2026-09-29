@@ -10,6 +10,7 @@
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import AppHeader from '$lib/components/app-header.svelte';
 	import SignIn from '$lib/components/sign-in.svelte';
+	import CommandPalette from '$lib/components/command-palette.svelte';
 	import { errorMessage, onUnauthenticated, systemClient } from '$lib/api';
 	import { session } from '$lib/session.svelte';
 	import ServerCrashIcon from '@lucide/svelte/icons/server-crash';
@@ -79,9 +80,10 @@
 		<AppSidebar />
 		<Sidebar.Inset class="min-w-0">
 			<AppHeader />
-			<main class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 md:p-6">
+			<div class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-5 md:px-8 md:py-7">
 				{@render children()}
-			</main>
+			</div>
 		</Sidebar.Inset>
 	</Sidebar.Provider>
+	<CommandPalette />
 {/if}

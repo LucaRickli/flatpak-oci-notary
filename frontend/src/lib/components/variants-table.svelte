@@ -79,7 +79,7 @@
 				<Table.Cell class="hidden md:table-cell">
 					<div class="flex flex-wrap gap-1">
 						{#each variant.tags.slice(0, MAX_TAGS) as tag (tag)}
-							<Badge variant="outline" class="font-mono">{tag}</Badge>
+							<Badge variant="muted" class="font-mono">{tag}</Badge>
 						{:else}
 							<span class="text-xs text-muted-foreground">untagged</span>
 						{/each}

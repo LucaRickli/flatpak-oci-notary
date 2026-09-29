@@ -13,7 +13,8 @@
 	<pre
 		class={cn(
 			'overflow-x-auto py-2.5 pr-11 pl-3 font-mono text-xs leading-relaxed',
-			wrap ? 'break-all whitespace-pre-wrap' : 'whitespace-pre'
+			wrap ? 'whitespace-pre-wrap [overflow-wrap:anywhere]' : 'whitespace-pre'
 		)}>{code}</pre>
-	<CopyButton value={code} class="absolute top-1 right-1" />
+	<!-- Opaque backdrop so scrolled code does not show through the button. -->
+	<div class="absolute top-1 right-1 rounded-md bg-muted"><CopyButton value={code} /></div>
 </div>

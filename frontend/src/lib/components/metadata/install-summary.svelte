@@ -88,7 +88,6 @@
 <Card.Root>
 	<Card.Header>
 		<Card.Title>Install summary</Card.Title>
-		<Card.Description>What installing this {kindWord} pulls in.</Card.Description>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		{#if meta.extraData}
@@ -141,14 +140,11 @@
 			<Separator />
 			<div class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<span class="text-sm font-medium">Extension points ({meta.extensions.length})</span>
+					<span class="text-sm font-medium" title="Extensions are looked up in the remote this {kindWord} is installed from, on install and update.">Extension points ({meta.extensions.length})</span>
 					<span class="text-xs text-muted-foreground">
 						{autoCount === 0 ? 'None downloaded automatically' : `${autoCount} downloaded automatically`}
 					</span>
 				</div>
-				<p class="text-xs text-muted-foreground">
-					Extensions are looked up in the remote this {kindWord} is installed from, on install and update.
-				</p>
 				{#each meta.extensions as ext (ext.group)}
 					{@render extension(ext)}
 				{/each}

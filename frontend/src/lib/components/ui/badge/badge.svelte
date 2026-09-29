@@ -11,6 +11,11 @@
 				outline: "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
 				ghost: "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
 				link: "text-primary underline-offset-4 hover:underline",
+				// Tinted status pills (project additions).
+				success: "bg-success/12 text-success [a]:hover:bg-success/20",
+				warning: "bg-warning/12 text-warning [a]:hover:bg-warning/20",
+				info: "bg-info/12 text-info [a]:hover:bg-info/20",
+				muted: "bg-muted text-muted-foreground [a]:hover:bg-muted/70",
 			},
 		},
 		defaultVariants: {

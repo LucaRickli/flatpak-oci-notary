@@ -2,10 +2,16 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { RefKind } from '$lib/api';
 	import { kindLabel } from '$lib/format';
+	import AppWindowIcon from '@lucide/svelte/icons/app-window';
+	import LayersIcon from '@lucide/svelte/icons/layers';
 
-	let { kind }: { kind: RefKind } = $props();
+	let { kind, class: className }: { kind: RefKind; class?: string } = $props();
 </script>
 
-<Badge variant={kind === RefKind.APP ? 'default' : kind === RefKind.RUNTIME ? 'secondary' : 'outline'}>
-	{kindLabel(kind)}
-</Badge>
+{#if kind === RefKind.APP}
+	<Badge variant="info" class={className}><AppWindowIcon data-icon="inline-start" />{kindLabel(kind)}</Badge>
+{:else if kind === RefKind.RUNTIME}
+	<Badge variant="muted" class={className}><LayersIcon data-icon="inline-start" />{kindLabel(kind)}</Badge>
+{:else}
+	<Badge variant="outline" class={className}>{kindLabel(kind)}</Badge>
+{/if}

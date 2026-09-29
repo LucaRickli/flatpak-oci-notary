@@ -6,7 +6,7 @@
 
 <PageHeader
 	title="Add registry"
-	description="Connect an upstream OCI registry. Use “Test connection” to check credentials and catalog support before saving."
+	description="Connect an upstream OCI registry to index its flatpak images."
 />
 
 <RegistryForm onsaved={(r) => goto(`/registries/${r.id}`)} oncancel={() => goto('/registries')} />

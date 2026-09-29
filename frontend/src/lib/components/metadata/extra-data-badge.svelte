@@ -4,17 +4,16 @@
 	import CloudDownloadIcon from '@lucide/svelte/icons/cloud-download';
 
 	/** Shows nothing unless `hasExtraData` (Image.hasExtraData / Package.hasExtraData). */
-	let { hasExtraData }: { hasExtraData: boolean } = $props();
+	let { hasExtraData, compact = false }: { hasExtraData: boolean; /** Icon only. */ compact?: boolean } =
+		$props();
 </script>
 
 {#if hasExtraData}
 	<Tooltip.Root>
 		<Tooltip.Trigger>
 			{#snippet child({ props })}
-				<!-- Darker text than the stock destructive badge in light mode: 12px text on the tinted
-				     background needs 4.5:1 (WCAG AA); dark mode already passes. -->
-				<Badge variant="destructive" {...props} class="text-red-700 dark:text-destructive">
-					<CloudDownloadIcon data-icon="inline-start" />External download
+				<Badge variant="warning" {...props} aria-label={compact ? 'External download' : undefined}>
+					<CloudDownloadIcon data-icon={compact ? undefined : 'inline-start'} />{#if !compact}External download{/if}
 				</Badge>
 			{/snippet}
 		</Tooltip.Trigger>

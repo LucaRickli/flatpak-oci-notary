@@ -7,6 +7,8 @@
 			variant: {
 				default: "bg-transparent",
 				outline: "border-input hover:bg-muted border bg-transparent",
+				// Segmented control item (project addition): use inside ToggleGroup variant="segmented".
+				segmented: "bg-transparent text-muted-foreground hover:bg-transparent rounded-md data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm dark:data-[state=on]:bg-input/60",
 			},
 			size: {
 				default: "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",

@@ -7,19 +7,27 @@
 	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 	import { Button } from '$lib/components/ui/button';
 	import { Spinner } from '$lib/components/ui/spinner';
-	import PageHeader from '$lib/components/page-header.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { Kbd } from '$lib/components/ui/kbd';
 	import PaginatedTable from '$lib/components/paginated-table.svelte';
 	import PackagesTable from '$lib/components/packages-table.svelte';
+	import PackageCard from '$lib/components/package-card.svelte';
 	import SyncUpdatingNote from '$lib/components/sync-updating-note.svelte';
 	import { imageClient, RefKind, registryClient } from '$lib/api';
 	import { Resource } from '$lib/resource.svelte';
 	import { onSyncEnded, poll } from '$lib/poll.svelte';
 	import { isSyncing, POLL_LIST_MS, syncPollInterval } from '$lib/sync';
 	import { canonicalId } from '$lib/ids';
+	import { cn } from '$lib/utils/shadcn';
 	import { DEFAULT_PAGE_SIZE, maxPage, PAGE_SIZES, pageRequest } from '$lib/pagination';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import PackageSearchIcon from '@lucide/svelte/icons/package-search';
 	import FunnelXIcon from '@lucide/svelte/icons/funnel-x';
+	import XIcon from '@lucide/svelte/icons/x';
+	import CpuIcon from '@lucide/svelte/icons/cpu';
+	import ServerIcon from '@lucide/svelte/icons/server';
+	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
+	import ListIcon from '@lucide/svelte/icons/list';
 
 	type KindFilter = 'all' | 'app' | 'runtime';
 	const kinds: Record<KindFilter, RefKind> = {
@@ -141,87 +149,155 @@
 		architecture = '';
 		page = 1;
 	}
+
+	// Grid (catalog) or list (table) view, remembered per browser.
+	const VIEW_KEY = 'notary.packages.view';
+	type View = 'grid' | 'list';
+	function readView(): View {
+		try {
+			return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid';
+		} catch {
+			return 'grid';
+		}
+	}
+	let view = $state<View>(readView());
+	function setView(v: string) {
+		if (v !== 'grid' && v !== 'list') return;
+		view = v;
+		try {
+			localStorage.setItem(VIEW_KEY, v);
+		} catch {
+			// Storage unavailable (private mode, blocked): the choice lasts for this page only.
+		}
+	}
+
+	const multiRegistry = $derived((registries.current?.length ?? 0) > 1);
+	let searchInput = $state<HTMLInputElement | null>(null);
+	function onkeydown(e: KeyboardEvent) {
+		// "/" focuses the search, like on most catalogs.
+		const target = e.target as HTMLElement | null;
+		if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+		if (target?.closest('input, textarea, select, [contenteditable]')) return;
+		e.preventDefault();
+		searchInput?.focus();
+	}
 </script>
 
-<PageHeader
-	title="Packages"
-	description="Flatpak apps and runtimes indexed from all registries, across architectures, branches and tags."
-/>
+<svelte:window {onkeydown} />
 
-<div class="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-	<InputGroup.Root class="md:max-w-sm">
-		<InputGroup.Input placeholder="Search name, ID or summary…" bind:value={query} aria-label="Search packages" />
-		<InputGroup.Addon>
-			{#if packages.loading && packages.current}<Spinner />{:else}<SearchIcon />{/if}
-		</InputGroup.Addon>
-	</InputGroup.Root>
-	<ToggleGroup.Root
-		type="single"
-		variant="outline"
-		value={kind}
-		onValueChange={(v) => {
-			if (!v) return;
-			kind = v as KindFilter;
-			page = 1;
-		}}
-		aria-label="Kind"
-	>
-		<ToggleGroup.Item value="all">All</ToggleGroup.Item>
-		<ToggleGroup.Item value="app">Apps</ToggleGroup.Item>
-		<ToggleGroup.Item value="runtime">Runtimes</ToggleGroup.Item>
-	</ToggleGroup.Root>
-	<Select.Root
-		type="single"
-		value={registryId || 'all'}
-		onValueChange={(v) => {
-			registryId = v === 'all' ? '' : v;
-			page = 1;
-		}}
-	>
-		<Select.Trigger class="w-full md:w-56" aria-label="Registry">
-			<span class="truncate">{registryLabel}</span>
-		</Select.Trigger>
-		<Select.Content>
-			<Select.Group>
-				<Select.Item value="all">All registries</Select.Item>
-				{#each registries.current ?? [] as r (r.id)}
-					<Select.Item value={r.id}>{r.name}</Select.Item>
-				{/each}
-			</Select.Group>
-		</Select.Content>
-	</Select.Root>
-	<Select.Root
-		type="single"
-		value={architecture || 'all'}
-		onValueChange={(v) => {
-			architecture = v === 'all' ? '' : v;
-			page = 1;
-		}}
-	>
-		<Select.Trigger class="w-full md:w-44" aria-label="Architecture">
-			{architecture || 'All architectures'}
-		</Select.Trigger>
-		<Select.Content>
-			<Select.Group>
-				<Select.Item value="all">All architectures</Select.Item>
-				{#each architectures as arch (arch)}
-					<Select.Item value={arch} class="font-mono">{arch}</Select.Item>
-				{/each}
-			</Select.Group>
-		</Select.Content>
-	</Select.Root>
-	{#if packages.current || syncing}
-		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 md:ml-auto">
+<section class="flex flex-col gap-4">
+	<div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+		<h1 class="text-2xl font-semibold md:text-[1.75rem] md:leading-9">Packages</h1>
+		<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
 			{#if syncing}<SyncUpdatingNote />{/if}
 			{#if packages.current}
-				<span class="text-sm text-muted-foreground tabular-nums">
+				<span class="tabular-nums">
 					{packages.current.totalSize.toLocaleString()}
-					{packages.current.totalSize === 1 ? 'package' : 'packages'}
+					{packages.current.totalSize === 1 ? 'package' : 'packages'}{filtered ? ' found' : ''}
 				</span>
 			{/if}
 		</div>
-	{/if}
-</div>
+	</div>
+	<InputGroup.Root class="h-11 rounded-xl bg-card shadow-xs">
+		<InputGroup.Addon class="pl-3.5">
+			{#if packages.loading && packages.current}<Spinner />{:else}<SearchIcon />{/if}
+		</InputGroup.Addon>
+		<InputGroup.Input
+			bind:ref={searchInput}
+			placeholder="Search apps and runtimes by name, ID or summary"
+			bind:value={query}
+			aria-label="Search packages"
+			class="text-base md:text-sm"
+		/>
+		<InputGroup.Addon align="inline-end" class="hidden pr-3 sm:flex">
+			{#if query}
+				<InputGroup.Button size="icon-xs" aria-label="Clear search" onclick={() => (query = '')}><XIcon /></InputGroup.Button>
+			{:else}
+				<Kbd>/</Kbd>
+			{/if}
+		</InputGroup.Addon>
+	</InputGroup.Root>
+
+	<div class="flex flex-wrap items-center gap-2">
+		<ToggleGroup.Root
+			type="single"
+			variant="segmented"
+			spacing={0.5}
+			size="sm"
+			value={kind}
+			onValueChange={(v) => {
+				if (!v) return;
+				kind = v as KindFilter;
+				page = 1;
+			}}
+			aria-label="Kind"
+		>
+			<ToggleGroup.Item value="all">All</ToggleGroup.Item>
+			<ToggleGroup.Item value="app">Apps</ToggleGroup.Item>
+			<ToggleGroup.Item value="runtime">Runtimes</ToggleGroup.Item>
+		</ToggleGroup.Root>
+		<Select.Root
+			type="single"
+			value={architecture || 'all'}
+			onValueChange={(v) => {
+				architecture = v === 'all' ? '' : v;
+				page = 1;
+			}}
+		>
+			<Select.Trigger size="sm" aria-label="Architecture" class={cn(architecture && 'border-primary/50')}>
+				<CpuIcon />
+				<span class={architecture ? 'font-mono' : ''}>{architecture || 'Any arch'}</span>
+			</Select.Trigger>
+			<Select.Content>
+				<Select.Group>
+					<Select.Item value="all">Any architecture</Select.Item>
+					{#each architectures as arch (arch)}
+						<Select.Item value={arch} class="font-mono">{arch}</Select.Item>
+					{/each}
+				</Select.Group>
+			</Select.Content>
+		</Select.Root>
+		{#if multiRegistry || registryId}
+			<Select.Root
+				type="single"
+				value={registryId || 'all'}
+				onValueChange={(v) => {
+					registryId = v === 'all' ? '' : v;
+					page = 1;
+				}}
+			>
+				<Select.Trigger size="sm" aria-label="Registry" class={cn('max-w-56', registryId && 'border-primary/50')}>
+					<ServerIcon />
+					<span class="truncate">{registryLabel}</span>
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						<Select.Item value="all">All registries</Select.Item>
+						{#each registries.current ?? [] as r (r.id)}
+							<Select.Item value={r.id}>{r.name}</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		{/if}
+		{#if filtered}
+			<Button variant="ghost" size="sm" onclick={clearFilters}><XIcon data-icon="inline-start" />Reset</Button>
+		{/if}
+		<ToggleGroup.Root
+			type="single"
+			variant="segmented"
+			spacing={0.5}
+			size="sm"
+			value={view}
+			onValueChange={setView}
+			aria-label="View"
+			class="ml-auto"
+		>
+			<ToggleGroup.Item value="grid" aria-label="Grid view" title="Grid view"><LayoutGridIcon /></ToggleGroup.Item>
+			<ToggleGroup.Item value="list" aria-label="List view" title="List view"><ListIcon /></ToggleGroup.Item>
+		</ToggleGroup.Root>
+	</div>
+</section>
 
 <PaginatedTable
 	result={packages.current}
@@ -231,9 +307,27 @@
 	bind:page
 	bind:pageSize
 	skeletonRows={8}
+	framed={view === 'list'}
 >
 	{#snippet children(res)}
-		<PackagesTable packages={res.packages} showRegistry={(registries.current?.length ?? 0) > 1 && !registryId} />
+		{#if view === 'list'}
+			<PackagesTable packages={res.packages} showRegistry={multiRegistry && !registryId} />
+		{:else}
+			<div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3 md:gap-4">
+				{#each res.packages as pkg (`${pkg.kind}/${pkg.flatpakId}`)}
+					<PackageCard {pkg} showRegistry={multiRegistry && !registryId} />
+				{/each}
+			</div>
+		{/if}
+	{/snippet}
+	{#snippet skeleton()}
+		{#if view === 'grid'}
+			<div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3 md:gap-4">
+				{#each { length: 12 }, i (i)}<Skeleton class="h-36 rounded-xl" />{/each}
+			</div>
+		{:else}
+			<Skeleton class="h-96 rounded-xl" />
+		{/if}
 	{/snippet}
 	{#snippet empty()}
 		<Empty.Root class="border border-dashed">

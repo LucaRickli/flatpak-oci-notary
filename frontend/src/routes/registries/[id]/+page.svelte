@@ -14,9 +14,8 @@
 	import SyncUpdatingNote from '$lib/components/sync-updating-note.svelte';
 	import ExternalSyncNote from '$lib/components/external-sync-note.svelte';
 	import ErrorAlert from '$lib/components/error-alert.svelte';
-	import StatCard from '$lib/components/stat-card.svelte';
 	import PaginatedTable from '$lib/components/paginated-table.svelte';
-	import PackagesTable from '$lib/components/packages-table.svelte';
+	import PackageCard from '$lib/components/package-card.svelte';
 	import RegistryForm from '$lib/components/registry-form.svelte';
 	import ConfirmDelete from '$lib/components/confirm-delete.svelte';
 	import { imageClient, registryClient, SyncState } from '$lib/api';
@@ -25,13 +24,16 @@
 	import { isNotFound, reportError } from '$lib/session.svelte';
 	import { setCrumb } from '$lib/breadcrumb.svelte';
 	import { isQueued, isQueuedBehind, isSyncing, POLL_LIST_MS, startSync, syncAction, syncPollInterval } from '$lib/sync';
-	import { DEFAULT_PAGE_SIZE, pageRequest } from '$lib/pagination';
+	import { PAGE_SIZES, pageRequest } from '$lib/pagination';
 	import { formatDate, formatDuration, formatInterval, formatRelative } from '$lib/format';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import HourglassIcon from '@lucide/svelte/icons/hourglass';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import PackageSearchIcon from '@lucide/svelte/icons/package-search';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import ServerIcon from '@lucide/svelte/icons/server';
+	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 
 	let { data } = $props();
 
@@ -40,7 +42,7 @@
 		void data.id;
 		return 1;
 	});
-	let pageSize = $state(DEFAULT_PAGE_SIZE);
+	let pageSize = $state(PAGE_SIZES[0]);
 
 	const resource = new Resource(async () => (await registryClient.getRegistry({ id: data.id })).registry);
 	const packages = new Resource(async () => {
@@ -137,6 +139,11 @@
 	</div>
 {:else}
 	<PageHeader title={registry.name}>
+		{#snippet media()}
+			<div class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary md:size-14">
+				<ServerIcon class="size-6" />
+			</div>
+		{/snippet}
 		<span class="font-mono text-sm break-all text-muted-foreground">{registry.url}</span>
 		{#snippet actions()}
 			{@render syncButton()}
@@ -156,40 +163,47 @@
 		</Alert.Root>
 	{/if}
 
-	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		<Card.Root size="sm">
-			<Card.Header>
-				<Card.Description>Status</Card.Description>
-				<Card.Title><SyncStateBadge {registry} /></Card.Title>
-			</Card.Header>
-			<Card.Content class="flex flex-col gap-2 text-xs text-muted-foreground">
-				<SyncProgress {registry} />
-				{#if queued || isQueuedBehind(registry)}
-					<span>{action.hint}</span>
-				{/if}
-				{#if registry.lastSyncAt}
-					<span>
-						<span title={formatDate(registry.lastSyncAt)}>Last sync {formatRelative(registry.lastSyncAt)}</span>
-						· took {formatDuration(registry.lastSyncDurationMs)}
+	<Card.Root class="py-0">
+		<dl class="grid grid-cols-2 lg:grid-cols-4 lg:divide-x [&>*:nth-child(-n+2)]:max-lg:border-b [&>*:nth-child(odd)]:max-lg:border-r">
+			<div class="flex min-w-0 flex-col gap-1.5 p-4">
+				<dt class="text-xs font-medium text-muted-foreground">Status</dt>
+				<dd class="flex flex-col gap-1.5">
+					<SyncStateBadge {registry} />
+					<SyncProgress {registry} />
+					{#if queued || isQueuedBehind(registry)}
+						<span class="text-xs text-muted-foreground">{action.hint}</span>
+					{:else if registry.lastSyncAt && !syncing}
+						<span class="text-xs text-muted-foreground" title={formatDate(registry.lastSyncAt)}>
+							{formatRelative(registry.lastSyncAt)} · {formatDuration(registry.lastSyncDurationMs)}
+						</span>
+					{/if}
+				</dd>
+			</div>
+			<div class="flex min-w-0 flex-col gap-0.5 p-4">
+				<dt class="text-xs font-medium text-muted-foreground">Flatpak images</dt>
+				<dd class="text-2xl font-semibold tabular-nums">{registry.imageCount.toLocaleString()}</dd>
+			</div>
+			<div class="flex min-w-0 flex-col gap-0.5 p-4">
+				<dt class="text-xs font-medium text-muted-foreground">OCI repositories</dt>
+				<dd class="text-2xl font-semibold tabular-nums">{registry.repositoryCount.toLocaleString()}</dd>
+			</div>
+			<div class="flex min-w-0 flex-col gap-0.5 p-4">
+				<dt class="text-xs font-medium text-muted-foreground">Schedule</dt>
+				<dd class="flex flex-col">
+					<span class="text-base font-semibold">{formatInterval(registry.syncIntervalMinutes)}</span>
+					<span class="truncate text-xs text-muted-foreground">
+						{registry.useCatalog ? 'Catalog discovery' : 'No catalog'} · {registry.repositories.length} explicit
 					</span>
-				{:else if !syncing}
-					<span>Not synced yet</span>
-				{/if}
-			</Card.Content>
-		</Card.Root>
-		<StatCard label="Flatpak images" value={registry.imageCount}>All architectures and tags</StatCard>
-		<StatCard label="OCI repositories" value={registry.repositoryCount}>Containing flatpak images</StatCard>
-		<StatCard label="Schedule" value={formatInterval(registry.syncIntervalMinutes)}>
-			{registry.useCatalog ? 'Catalog discovery' : 'No catalog'} · {registry.repositories.length} explicit
-			{registry.repositories.length === 1 ? 'repository' : 'repositories'}
-		</StatCard>
-	</div>
+				</dd>
+			</div>
+		</dl>
+	</Card.Root>
 	<ExternalSyncNote />
 
 	<Tabs.Root bind:value={tab}>
-		<Tabs.List>
-			<Tabs.Trigger value="packages">Packages</Tabs.Trigger>
-			<Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+		<Tabs.List variant="line" class="w-full justify-start border-b">
+			<Tabs.Trigger value="packages" class="flex-none"><LayoutGridIcon />Packages</Tabs.Trigger>
+			<Tabs.Trigger value="settings" class="flex-none"><SettingsIcon />Settings</Tabs.Trigger>
 		</Tabs.List>
 		<Tabs.Content value="packages" class="flex flex-col gap-3 pt-2">
 			{#if syncing}<SyncUpdatingNote />{/if}
@@ -200,9 +214,14 @@
 				onretry={packages.refresh}
 				bind:page
 				bind:pageSize
+				framed={false}
 			>
 				{#snippet children(res)}
-					<PackagesTable packages={res.packages} showRegistry={false} />
+					<div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3 md:gap-4">
+						{#each res.packages as pkg (`${pkg.kind}/${pkg.flatpakId}`)}
+							<PackageCard {pkg} showRegistry={false} />
+						{/each}
+					</div>
 				{/snippet}
 				{#snippet empty()}
 					<Empty.Root class="border border-dashed">

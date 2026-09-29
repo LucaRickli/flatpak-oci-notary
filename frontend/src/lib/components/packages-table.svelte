@@ -25,7 +25,7 @@
 {#snippet chips(values: string[])}
 	<div class="flex flex-wrap gap-1">
 		{#each values.slice(0, MAX_CHIPS) as value (value)}
-			<Badge variant="outline" class="font-mono">{value}</Badge>
+			<Badge variant="muted" class="font-mono">{value}</Badge>
 		{:else}
 			<span class="text-muted-foreground">—</span>
 		{/each}
@@ -37,22 +37,22 @@
 
 <Table.Root>
 	<Table.Header>
-		<Table.Row>
-			<Table.Head>Package</Table.Head>
+		<Table.Row class="hover:bg-transparent">
+			<Table.Head class="pl-4">Package</Table.Head>
 			<Table.Head>Kind</Table.Head>
 			<Table.Head class="hidden md:table-cell">Architectures</Table.Head>
 			<Table.Head class="hidden md:table-cell">Branches</Table.Head>
 			{#if showRegistry}<Table.Head class="hidden lg:table-cell">Registries</Table.Head>{/if}
 			<Table.Head class="hidden xl:table-cell">Version</Table.Head>
-			<Table.Head class="hidden lg:table-cell">Updated</Table.Head>
+			<Table.Head class="hidden pr-4 lg:table-cell">Updated</Table.Head>
 		</Table.Row>
 	</Table.Header>
 	<Table.Body>
 		{#each packages as pkg (`${pkg.kind}/${pkg.flatpakId}`)}
 			{@const href = packageHref(pkg.kind, pkg.flatpakId)}
 			{@const title = packageTitle(pkg)}
-			<Table.Row class="cursor-pointer" onclick={rowClick(() => goto(href))}>
-				<Table.Cell class="max-w-56 sm:max-w-80">
+			<Table.Row class="h-14 cursor-pointer" onclick={rowClick(() => goto(href))}>
+				<Table.Cell class="max-w-56 pl-4 sm:max-w-80">
 					<div class="flex items-center gap-3">
 						<PackageIcon iconId={pkg.iconImageId} alt={title} />
 						<div class="flex min-w-0 flex-col">
@@ -79,7 +79,7 @@
 				<Table.Cell class="hidden max-w-32 truncate text-muted-foreground xl:table-cell" title={pkg.version}>
 					{pkg.version || '—'}
 				</Table.Cell>
-				<Table.Cell class="hidden text-muted-foreground lg:table-cell">
+				<Table.Cell class="hidden pr-4 text-muted-foreground lg:table-cell">
 					<span title={formatDate(pkg.updated)}>{pkg.updated ? formatRelative(pkg.updated) : '—'}</span>
 				</Table.Cell>
 			</Table.Row>
