@@ -216,8 +216,12 @@ type GetInfoResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Version string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
 	// Base URL used for generated remote URLs, e.g. "https://flatpak.example.com".
-	PublicUrl     string `protobuf:"bytes,2,opt,name=public_url,json=publicUrl,proto3" json:"public_url,omitempty"`
-	AuthEnabled   bool   `protobuf:"varint,3,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
+	PublicUrl   string `protobuf:"bytes,2,opt,name=public_url,json=publicUrl,proto3" json:"public_url,omitempty"`
+	AuthEnabled bool   `protobuf:"varint,3,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
+	// Whether this server runs the sync scheduler itself. When false, syncs are
+	// run by a separate "notary sync" process (e.g. a Kubernetes CronJob) and
+	// SyncRegistry only records a request for it.
+	EmbeddedSync  bool `protobuf:"varint,4,opt,name=embedded_sync,json=embeddedSync,proto3" json:"embedded_sync,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,6 +273,13 @@ func (x *GetInfoResponse) GetPublicUrl() string {
 func (x *GetInfoResponse) GetAuthEnabled() bool {
 	if x != nil {
 		return x.AuthEnabled
+	}
+	return false
+}
+
+func (x *GetInfoResponse) GetEmbeddedSync() bool {
+	if x != nil {
+		return x.EmbeddedSync
 	}
 	return false
 }
@@ -616,7 +627,7 @@ func (*LogoutResponse) Descriptor() ([]byte, []int) {
 
 type Registry struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Base URL of the OCI registry, e.g. "https://ghcr.io".
 	Url string `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
@@ -646,8 +657,16 @@ type Registry struct {
 	RepositoryCount int32                  `protobuf:"varint,18,opt,name=repository_count,json=repositoryCount,proto3" json:"repository_count,omitempty"`
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// A sync was requested (SyncRegistry, or the registry was created/changed)
+	// and waits for a syncer to pick it up.
+	SyncRequested bool `protobuf:"varint,21,opt,name=sync_requested,json=syncRequested,proto3" json:"sync_requested,omitempty"`
+	// Progress of the running sync (sync_state SYNCING). total is 0 while the
+	// repositories are still being discovered. Indexed repositories become
+	// visible while the sync runs.
+	SyncRepositoriesDone  int32 `protobuf:"varint,22,opt,name=sync_repositories_done,json=syncRepositoriesDone,proto3" json:"sync_repositories_done,omitempty"`
+	SyncRepositoriesTotal int32 `protobuf:"varint,23,opt,name=sync_repositories_total,json=syncRepositoriesTotal,proto3" json:"sync_repositories_total,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Registry) Reset() {
@@ -680,11 +699,11 @@ func (*Registry) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *Registry) GetId() int32 {
+func (x *Registry) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *Registry) GetName() string {
@@ -818,6 +837,27 @@ func (x *Registry) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *Registry) GetSyncRequested() bool {
+	if x != nil {
+		return x.SyncRequested
+	}
+	return false
+}
+
+func (x *Registry) GetSyncRepositoriesDone() int32 {
+	if x != nil {
+		return x.SyncRepositoriesDone
+	}
+	return 0
+}
+
+func (x *Registry) GetSyncRepositoriesTotal() int32 {
+	if x != nil {
+		return x.SyncRepositoriesTotal
+	}
+	return 0
 }
 
 type RegistryInput struct {
@@ -1027,7 +1067,7 @@ func (x *ListRegistriesResponse) GetRegistries() []*Registry {
 
 type GetRegistryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1062,11 +1102,11 @@ func (*GetRegistryRequest) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *GetRegistryRequest) GetId() int32 {
+func (x *GetRegistryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 type GetRegistryResponse struct {
@@ -1203,7 +1243,7 @@ func (x *CreateRegistryResponse) GetRegistry() *Registry {
 
 type UpdateRegistryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Registry      *RegistryInput         `protobuf:"bytes,2,opt,name=registry,proto3" json:"registry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1239,11 +1279,11 @@ func (*UpdateRegistryRequest) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *UpdateRegistryRequest) GetId() int32 {
+func (x *UpdateRegistryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *UpdateRegistryRequest) GetRegistry() *RegistryInput {
@@ -1299,7 +1339,7 @@ func (x *UpdateRegistryResponse) GetRegistry() *Registry {
 
 type DeleteRegistryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1334,11 +1374,11 @@ func (*DeleteRegistryRequest) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *DeleteRegistryRequest) GetId() int32 {
+func (x *DeleteRegistryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 type DeleteRegistryResponse struct {
@@ -1379,7 +1419,7 @@ func (*DeleteRegistryResponse) Descriptor() ([]byte, []int) {
 
 type SyncRegistryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1414,11 +1454,11 @@ func (*SyncRegistryRequest) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{21}
 }
 
-func (x *SyncRegistryRequest) GetId() int32 {
+func (x *SyncRegistryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 type SyncRegistryResponse struct {
@@ -1469,7 +1509,7 @@ type TestRegistryRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Registry *RegistryInput         `protobuf:"bytes,1,opt,name=registry,proto3" json:"registry,omitempty"`
 	// Set to reuse the stored password of an existing registry.
-	Id            *int32 `protobuf:"varint,2,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	Id            *string `protobuf:"bytes,2,opt,name=id,proto3,oneof" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1511,11 +1551,11 @@ func (x *TestRegistryRequest) GetRegistry() *RegistryInput {
 	return nil
 }
 
-func (x *TestRegistryRequest) GetId() int32 {
+func (x *TestRegistryRequest) GetId() string {
 	if x != nil && x.Id != nil {
 		return *x.Id
 	}
-	return 0
+	return ""
 }
 
 type TestRegistryResponse struct {
@@ -1590,8 +1630,8 @@ func (x *TestRegistryResponse) GetSampleRepositories() []string {
 
 type Image struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
-	Id           int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	RegistryId   int32                  `protobuf:"varint,2,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	RegistryId   string                 `protobuf:"bytes,2,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
 	RegistryName string                 `protobuf:"bytes,3,opt,name=registry_name,json=registryName,proto3" json:"registry_name,omitempty"`
 	// OCI repository path on the registry, e.g. "myorg/org.example.App".
 	Repository string `protobuf:"bytes,4,opt,name=repository,proto3" json:"repository,omitempty"`
@@ -1618,8 +1658,15 @@ type Image struct {
 	// Image creation time from the config, if known.
 	Created *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created,proto3" json:"created,omitempty"`
 	// Icon served at GET /icons/{id} when true.
-	HasIcon       bool                   `protobuf:"varint,21,opt,name=has_icon,json=hasIcon,proto3" json:"has_icon,omitempty"`
-	IndexedAt     *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=indexed_at,json=indexedAt,proto3" json:"indexed_at,omitempty"`
+	HasIcon   bool                   `protobuf:"varint,21,opt,name=has_icon,json=hasIcon,proto3" json:"has_icon,omitempty"`
+	IndexedAt *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=indexed_at,json=indexedAt,proto3" json:"indexed_at,omitempty"`
+	// From the flatpak metadata: the runtime this app (or extension/runtime)
+	// builds on, e.g. "org.fedoraproject.Platform/x86_64/f44"; empty if none.
+	Runtime string `protobuf:"bytes,23,opt,name=runtime,proto3" json:"runtime,omitempty"`
+	// For extensions: the ref they extend ([ExtensionOf] ref); empty otherwise.
+	ExtensionOf string `protobuf:"bytes,24,opt,name=extension_of,json=extensionOf,proto3" json:"extension_of,omitempty"`
+	// Installing downloads extra data from external URLs ([Extra Data]).
+	HasExtraData  bool `protobuf:"varint,25,opt,name=has_extra_data,json=hasExtraData,proto3" json:"has_extra_data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1654,18 +1701,18 @@ func (*Image) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{25}
 }
 
-func (x *Image) GetId() int32 {
+func (x *Image) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
-func (x *Image) GetRegistryId() int32 {
+func (x *Image) GetRegistryId() string {
 	if x != nil {
 		return x.RegistryId
 	}
-	return 0
+	return ""
 }
 
 func (x *Image) GetRegistryName() string {
@@ -1808,14 +1855,41 @@ func (x *Image) GetIndexedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Image) GetRuntime() string {
+	if x != nil {
+		return x.Runtime
+	}
+	return ""
+}
+
+func (x *Image) GetExtensionOf() string {
+	if x != nil {
+		return x.ExtensionOf
+	}
+	return ""
+}
+
+func (x *Image) GetHasExtraData() bool {
+	if x != nil {
+		return x.HasExtraData
+	}
+	return false
+}
+
 type ListImagesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 0 = all registries.
-	RegistryId int32 `protobuf:"varint,1,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
-	// Free-text search in ref, name and repository.
+	// Empty = all registries.
+	RegistryId string `protobuf:"bytes,1,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	// Free-text search (case-insensitive) in ref, name, summary and repository.
 	Query string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 	// Unspecified = all kinds.
-	Kind          RefKind `protobuf:"varint,3,opt,name=kind,proto3,enum=notary.v1.RefKind" json:"kind,omitempty"`
+	Kind RefKind `protobuf:"varint,3,opt,name=kind,proto3,enum=notary.v1.RefKind" json:"kind,omitempty"`
+	// Exact flatpak ID, e.g. "org.example.App" (all arches and branches).
+	FlatpakId string `protobuf:"bytes,4,opt,name=flatpak_id,json=flatpakId,proto3" json:"flatpak_id,omitempty"`
+	// Exact OCI architecture, e.g. "amd64". Empty = all.
+	Architecture  string `protobuf:"bytes,5,opt,name=architecture,proto3" json:"architecture,omitempty"`
+	PageSize      int32  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Offset        int32  `protobuf:"varint,7,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1850,11 +1924,11 @@ func (*ListImagesRequest) Descriptor() ([]byte, []int) {
 	return file_notary_v1_notary_proto_rawDescGZIP(), []int{26}
 }
 
-func (x *ListImagesRequest) GetRegistryId() int32 {
+func (x *ListImagesRequest) GetRegistryId() string {
 	if x != nil {
 		return x.RegistryId
 	}
-	return 0
+	return ""
 }
 
 func (x *ListImagesRequest) GetQuery() string {
@@ -1871,9 +1945,40 @@ func (x *ListImagesRequest) GetKind() RefKind {
 	return RefKind_REF_KIND_UNSPECIFIED
 }
 
+func (x *ListImagesRequest) GetFlatpakId() string {
+	if x != nil {
+		return x.FlatpakId
+	}
+	return ""
+}
+
+func (x *ListImagesRequest) GetArchitecture() string {
+	if x != nil {
+		return x.Architecture
+	}
+	return ""
+}
+
+func (x *ListImagesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListImagesRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
 type ListImagesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Images        []*Image               `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Ordered by ref, then repository.
+	Images []*Image `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
+	// Total number of images matching the filters (ignoring pagination).
+	TotalSize     int32 `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1915,16 +2020,700 @@ func (x *ListImagesResponse) GetImages() []*Image {
 	return nil
 }
 
+func (x *ListImagesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+type ListImageRepositoriesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty = all registries.
+	RegistryId string `protobuf:"bytes,1,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	// Free-text search (case-insensitive) in repository, flatpak ID and name.
+	Query         string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	PageSize      int32  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Offset        int32  `protobuf:"varint,4,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListImageRepositoriesRequest) Reset() {
+	*x = ListImageRepositoriesRequest{}
+	mi := &file_notary_v1_notary_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListImageRepositoriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListImageRepositoriesRequest) ProtoMessage() {}
+
+func (x *ListImageRepositoriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListImageRepositoriesRequest.ProtoReflect.Descriptor instead.
+func (*ListImageRepositoriesRequest) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListImageRepositoriesRequest) GetRegistryId() string {
+	if x != nil {
+		return x.RegistryId
+	}
+	return ""
+}
+
+func (x *ListImageRepositoriesRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *ListImageRepositoriesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListImageRepositoriesRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+// An OCI repository containing flatpak images.
+type ImageRepository struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	RegistryId   string                 `protobuf:"bytes,1,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	RegistryName string                 `protobuf:"bytes,2,opt,name=registry_name,json=registryName,proto3" json:"registry_name,omitempty"`
+	// OCI repository path, e.g. "myorg/org.example.App".
+	Repository string `protobuf:"bytes,3,opt,name=repository,proto3" json:"repository,omitempty"`
+	// Distinct flatpak IDs of its images, sorted.
+	FlatpakIds []string `protobuf:"bytes,4,rep,name=flatpak_ids,json=flatpakIds,proto3" json:"flatpak_ids,omitempty"`
+	// Appstream name of one of its images; may be empty.
+	Name       string  `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
+	Kind       RefKind `protobuf:"varint,6,opt,name=kind,proto3,enum=notary.v1.RefKind" json:"kind,omitempty"`
+	ImageCount int32   `protobuf:"varint,7,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
+	// Distinct OCI architectures, sorted.
+	Architectures []string `protobuf:"bytes,8,rep,name=architectures,proto3" json:"architectures,omitempty"`
+	// An image of this repository that has an icon (GET /icons/{id}); empty = none.
+	IconImageId   string `protobuf:"bytes,9,opt,name=icon_image_id,json=iconImageId,proto3" json:"icon_image_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImageRepository) Reset() {
+	*x = ImageRepository{}
+	mi := &file_notary_v1_notary_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImageRepository) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImageRepository) ProtoMessage() {}
+
+func (x *ImageRepository) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImageRepository.ProtoReflect.Descriptor instead.
+func (*ImageRepository) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ImageRepository) GetRegistryId() string {
+	if x != nil {
+		return x.RegistryId
+	}
+	return ""
+}
+
+func (x *ImageRepository) GetRegistryName() string {
+	if x != nil {
+		return x.RegistryName
+	}
+	return ""
+}
+
+func (x *ImageRepository) GetRepository() string {
+	if x != nil {
+		return x.Repository
+	}
+	return ""
+}
+
+func (x *ImageRepository) GetFlatpakIds() []string {
+	if x != nil {
+		return x.FlatpakIds
+	}
+	return nil
+}
+
+func (x *ImageRepository) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ImageRepository) GetKind() RefKind {
+	if x != nil {
+		return x.Kind
+	}
+	return RefKind_REF_KIND_UNSPECIFIED
+}
+
+func (x *ImageRepository) GetImageCount() int32 {
+	if x != nil {
+		return x.ImageCount
+	}
+	return 0
+}
+
+func (x *ImageRepository) GetArchitectures() []string {
+	if x != nil {
+		return x.Architectures
+	}
+	return nil
+}
+
+func (x *ImageRepository) GetIconImageId() string {
+	if x != nil {
+		return x.IconImageId
+	}
+	return ""
+}
+
+type ListImageRepositoriesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Ordered by repository.
+	Repositories  []*ImageRepository `protobuf:"bytes,1,rep,name=repositories,proto3" json:"repositories,omitempty"`
+	TotalSize     int32              `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListImageRepositoriesResponse) Reset() {
+	*x = ListImageRepositoriesResponse{}
+	mi := &file_notary_v1_notary_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListImageRepositoriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListImageRepositoriesResponse) ProtoMessage() {}
+
+func (x *ListImageRepositoriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListImageRepositoriesResponse.ProtoReflect.Descriptor instead.
+func (*ListImageRepositoriesResponse) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListImageRepositoriesResponse) GetRepositories() []*ImageRepository {
+	if x != nil {
+		return x.Repositories
+	}
+	return nil
+}
+
+func (x *ListImageRepositoriesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+type RegistryRef struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegistryRef) Reset() {
+	*x = RegistryRef{}
+	mi := &file_notary_v1_notary_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegistryRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegistryRef) ProtoMessage() {}
+
+func (x *RegistryRef) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegistryRef.ProtoReflect.Descriptor instead.
+func (*RegistryRef) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *RegistryRef) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RegistryRef) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// A flatpak (app or runtime) identified by kind + flatpak ID. Its images may
+// come from several registries and cover several architectures and branches.
+type Package struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Kind      RefKind                `protobuf:"varint,1,opt,name=kind,proto3,enum=notary.v1.RefKind" json:"kind,omitempty"`
+	FlatpakId string                 `protobuf:"bytes,2,opt,name=flatpak_id,json=flatpakId,proto3" json:"flatpak_id,omitempty"`
+	// Appstream name and summary of the newest variant; may be empty.
+	Name    string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Summary string `protobuf:"bytes,4,opt,name=summary,proto3" json:"summary,omitempty"`
+	// Version of the newest variant; may be empty.
+	Version string `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	// Distinct OCI architectures, sorted.
+	Architectures []string `protobuf:"bytes,6,rep,name=architectures,proto3" json:"architectures,omitempty"`
+	// Distinct branches, sorted.
+	Branches []string `protobuf:"bytes,7,rep,name=branches,proto3" json:"branches,omitempty"`
+	// Registries providing the package, sorted by name.
+	Registries []*RegistryRef `protobuf:"bytes,8,rep,name=registries,proto3" json:"registries,omitempty"`
+	ImageCount int32          `protobuf:"varint,9,opt,name=image_count,json=imageCount,proto3" json:"image_count,omitempty"`
+	// A variant with an icon (GET /icons/{id}); empty = none.
+	IconImageId string `protobuf:"bytes,10,opt,name=icon_image_id,json=iconImageId,proto3" json:"icon_image_id,omitempty"`
+	// At least one variant downloads extra data on install.
+	HasExtraData bool `protobuf:"varint,11,opt,name=has_extra_data,json=hasExtraData,proto3" json:"has_extra_data,omitempty"`
+	// Newest creation time among the variants.
+	Updated       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated,proto3" json:"updated,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Package) Reset() {
+	*x = Package{}
+	mi := &file_notary_v1_notary_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Package) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Package) ProtoMessage() {}
+
+func (x *Package) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Package.ProtoReflect.Descriptor instead.
+func (*Package) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *Package) GetKind() RefKind {
+	if x != nil {
+		return x.Kind
+	}
+	return RefKind_REF_KIND_UNSPECIFIED
+}
+
+func (x *Package) GetFlatpakId() string {
+	if x != nil {
+		return x.FlatpakId
+	}
+	return ""
+}
+
+func (x *Package) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Package) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *Package) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *Package) GetArchitectures() []string {
+	if x != nil {
+		return x.Architectures
+	}
+	return nil
+}
+
+func (x *Package) GetBranches() []string {
+	if x != nil {
+		return x.Branches
+	}
+	return nil
+}
+
+func (x *Package) GetRegistries() []*RegistryRef {
+	if x != nil {
+		return x.Registries
+	}
+	return nil
+}
+
+func (x *Package) GetImageCount() int32 {
+	if x != nil {
+		return x.ImageCount
+	}
+	return 0
+}
+
+func (x *Package) GetIconImageId() string {
+	if x != nil {
+		return x.IconImageId
+	}
+	return ""
+}
+
+func (x *Package) GetHasExtraData() bool {
+	if x != nil {
+		return x.HasExtraData
+	}
+	return false
+}
+
+func (x *Package) GetUpdated() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Updated
+	}
+	return nil
+}
+
+type ListPackagesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only packages with images in this registry; empty = all.
+	RegistryId string `protobuf:"bytes,1,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	// Free-text search (case-insensitive) in flatpak ID, name and summary.
+	Query string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	// Unspecified = all kinds.
+	Kind RefKind `protobuf:"varint,3,opt,name=kind,proto3,enum=notary.v1.RefKind" json:"kind,omitempty"`
+	// Only packages available for this OCI architecture; empty = all.
+	Architecture  string `protobuf:"bytes,4,opt,name=architecture,proto3" json:"architecture,omitempty"`
+	PageSize      int32  `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Offset        int32  `protobuf:"varint,6,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPackagesRequest) Reset() {
+	*x = ListPackagesRequest{}
+	mi := &file_notary_v1_notary_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPackagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPackagesRequest) ProtoMessage() {}
+
+func (x *ListPackagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPackagesRequest.ProtoReflect.Descriptor instead.
+func (*ListPackagesRequest) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ListPackagesRequest) GetRegistryId() string {
+	if x != nil {
+		return x.RegistryId
+	}
+	return ""
+}
+
+func (x *ListPackagesRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *ListPackagesRequest) GetKind() RefKind {
+	if x != nil {
+		return x.Kind
+	}
+	return RefKind_REF_KIND_UNSPECIFIED
+}
+
+func (x *ListPackagesRequest) GetArchitecture() string {
+	if x != nil {
+		return x.Architecture
+	}
+	return ""
+}
+
+func (x *ListPackagesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPackagesRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListPackagesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Ordered by display name (name, falling back to flatpak ID), case-insensitive, then flatpak ID and kind.
+	Packages      []*Package `protobuf:"bytes,1,rep,name=packages,proto3" json:"packages,omitempty"`
+	TotalSize     int32      `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPackagesResponse) Reset() {
+	*x = ListPackagesResponse{}
+	mi := &file_notary_v1_notary_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPackagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPackagesResponse) ProtoMessage() {}
+
+func (x *ListPackagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPackagesResponse.ProtoReflect.Descriptor instead.
+func (*ListPackagesResponse) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ListPackagesResponse) GetPackages() []*Package {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
+func (x *ListPackagesResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+type GetPackageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          RefKind                `protobuf:"varint,1,opt,name=kind,proto3,enum=notary.v1.RefKind" json:"kind,omitempty"`
+	FlatpakId     string                 `protobuf:"bytes,2,opt,name=flatpak_id,json=flatpakId,proto3" json:"flatpak_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPackageRequest) Reset() {
+	*x = GetPackageRequest{}
+	mi := &file_notary_v1_notary_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPackageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPackageRequest) ProtoMessage() {}
+
+func (x *GetPackageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPackageRequest.ProtoReflect.Descriptor instead.
+func (*GetPackageRequest) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *GetPackageRequest) GetKind() RefKind {
+	if x != nil {
+		return x.Kind
+	}
+	return RefKind_REF_KIND_UNSPECIFIED
+}
+
+func (x *GetPackageRequest) GetFlatpakId() string {
+	if x != nil {
+		return x.FlatpakId
+	}
+	return ""
+}
+
+type GetPackageResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Package *Package               `protobuf:"bytes,1,opt,name=package,proto3" json:"package,omitempty"`
+	// All images of the package, ordered by branch, architecture, registry name, repository.
+	Variants      []*Image `protobuf:"bytes,2,rep,name=variants,proto3" json:"variants,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPackageResponse) Reset() {
+	*x = GetPackageResponse{}
+	mi := &file_notary_v1_notary_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPackageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPackageResponse) ProtoMessage() {}
+
+func (x *GetPackageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPackageResponse.ProtoReflect.Descriptor instead.
+func (*GetPackageResponse) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *GetPackageResponse) GetPackage() *Package {
+	if x != nil {
+		return x.Package
+	}
+	return nil
+}
+
+func (x *GetPackageResponse) GetVariants() []*Image {
+	if x != nil {
+		return x.Variants
+	}
+	return nil
+}
+
 type GetImageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetImageRequest) Reset() {
 	*x = GetImageRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[28]
+	mi := &file_notary_v1_notary_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1936,7 +2725,7 @@ func (x *GetImageRequest) String() string {
 func (*GetImageRequest) ProtoMessage() {}
 
 func (x *GetImageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[28]
+	mi := &file_notary_v1_notary_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1949,14 +2738,14 @@ func (x *GetImageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetImageRequest.ProtoReflect.Descriptor instead.
 func (*GetImageRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{28}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{37}
 }
 
-func (x *GetImageRequest) GetId() int32 {
+func (x *GetImageRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 type GetImageResponse struct {
@@ -1972,7 +2761,7 @@ type GetImageResponse struct {
 
 func (x *GetImageResponse) Reset() {
 	*x = GetImageResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[29]
+	mi := &file_notary_v1_notary_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1984,7 +2773,7 @@ func (x *GetImageResponse) String() string {
 func (*GetImageResponse) ProtoMessage() {}
 
 func (x *GetImageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[29]
+	mi := &file_notary_v1_notary_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1997,7 +2786,7 @@ func (x *GetImageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetImageResponse.ProtoReflect.Descriptor instead.
 func (*GetImageResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{29}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetImageResponse) GetImage() *Image {
@@ -2039,7 +2828,7 @@ type Source struct {
 
 func (x *Source) Reset() {
 	*x = Source{}
-	mi := &file_notary_v1_notary_proto_msgTypes[30]
+	mi := &file_notary_v1_notary_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2051,7 +2840,7 @@ func (x *Source) String() string {
 func (*Source) ProtoMessage() {}
 
 func (x *Source) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[30]
+	mi := &file_notary_v1_notary_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2064,7 +2853,7 @@ func (x *Source) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Source.ProtoReflect.Descriptor instead.
 func (*Source) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{30}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *Source) GetRepositoryPattern() string {
@@ -2109,7 +2898,7 @@ type RepositoryUrls struct {
 
 func (x *RepositoryUrls) Reset() {
 	*x = RepositoryUrls{}
-	mi := &file_notary_v1_notary_proto_msgTypes[31]
+	mi := &file_notary_v1_notary_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2121,7 +2910,7 @@ func (x *RepositoryUrls) String() string {
 func (*RepositoryUrls) ProtoMessage() {}
 
 func (x *RepositoryUrls) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[31]
+	mi := &file_notary_v1_notary_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2134,7 +2923,7 @@ func (x *RepositoryUrls) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepositoryUrls.ProtoReflect.Descriptor instead.
 func (*RepositoryUrls) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{31}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *RepositoryUrls) GetRemote() string {
@@ -2160,7 +2949,7 @@ func (x *RepositoryUrls) GetIndex() string {
 
 type Repository struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// URL-safe identifier: [a-z0-9][a-z0-9._-]*
 	Slug        string `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
 	Title       string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
@@ -2168,7 +2957,7 @@ type Repository struct {
 	Homepage    string `protobuf:"bytes,5,opt,name=homepage,proto3" json:"homepage,omitempty"`
 	// A repository serves images of exactly one upstream registry, because the
 	// flatpak index format has a single "Registry" base URL.
-	RegistryId   int32     `protobuf:"varint,6,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	RegistryId   string    `protobuf:"bytes,6,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
 	RegistryName string    `protobuf:"bytes,7,opt,name=registry_name,json=registryName,proto3" json:"registry_name,omitempty"`
 	Sources      []*Source `protobuf:"bytes,8,rep,name=sources,proto3" json:"sources,omitempty"`
 	// Images matched by the sources (all arches and tags, before per-ref de-duplication).
@@ -2182,7 +2971,7 @@ type Repository struct {
 
 func (x *Repository) Reset() {
 	*x = Repository{}
-	mi := &file_notary_v1_notary_proto_msgTypes[32]
+	mi := &file_notary_v1_notary_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2194,7 +2983,7 @@ func (x *Repository) String() string {
 func (*Repository) ProtoMessage() {}
 
 func (x *Repository) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[32]
+	mi := &file_notary_v1_notary_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2207,14 +2996,14 @@ func (x *Repository) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Repository.ProtoReflect.Descriptor instead.
 func (*Repository) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{32}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{41}
 }
 
-func (x *Repository) GetId() int32 {
+func (x *Repository) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *Repository) GetSlug() string {
@@ -2245,11 +3034,11 @@ func (x *Repository) GetHomepage() string {
 	return ""
 }
 
-func (x *Repository) GetRegistryId() int32 {
+func (x *Repository) GetRegistryId() string {
 	if x != nil {
 		return x.RegistryId
 	}
-	return 0
+	return ""
 }
 
 func (x *Repository) GetRegistryName() string {
@@ -2300,7 +3089,7 @@ type RepositoryInput struct {
 	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	Homepage      string                 `protobuf:"bytes,4,opt,name=homepage,proto3" json:"homepage,omitempty"`
-	RegistryId    int32                  `protobuf:"varint,5,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	RegistryId    string                 `protobuf:"bytes,5,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
 	Sources       []*Source              `protobuf:"bytes,6,rep,name=sources,proto3" json:"sources,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2308,7 +3097,7 @@ type RepositoryInput struct {
 
 func (x *RepositoryInput) Reset() {
 	*x = RepositoryInput{}
-	mi := &file_notary_v1_notary_proto_msgTypes[33]
+	mi := &file_notary_v1_notary_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2320,7 +3109,7 @@ func (x *RepositoryInput) String() string {
 func (*RepositoryInput) ProtoMessage() {}
 
 func (x *RepositoryInput) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[33]
+	mi := &file_notary_v1_notary_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2333,7 +3122,7 @@ func (x *RepositoryInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepositoryInput.ProtoReflect.Descriptor instead.
 func (*RepositoryInput) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{33}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *RepositoryInput) GetSlug() string {
@@ -2364,11 +3153,11 @@ func (x *RepositoryInput) GetHomepage() string {
 	return ""
 }
 
-func (x *RepositoryInput) GetRegistryId() int32 {
+func (x *RepositoryInput) GetRegistryId() string {
 	if x != nil {
 		return x.RegistryId
 	}
-	return 0
+	return ""
 }
 
 func (x *RepositoryInput) GetSources() []*Source {
@@ -2386,7 +3175,7 @@ type ListRepositoriesRequest struct {
 
 func (x *ListRepositoriesRequest) Reset() {
 	*x = ListRepositoriesRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[34]
+	mi := &file_notary_v1_notary_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2398,7 +3187,7 @@ func (x *ListRepositoriesRequest) String() string {
 func (*ListRepositoriesRequest) ProtoMessage() {}
 
 func (x *ListRepositoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[34]
+	mi := &file_notary_v1_notary_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2411,7 +3200,7 @@ func (x *ListRepositoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRepositoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListRepositoriesRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{34}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{43}
 }
 
 type ListRepositoriesResponse struct {
@@ -2423,7 +3212,7 @@ type ListRepositoriesResponse struct {
 
 func (x *ListRepositoriesResponse) Reset() {
 	*x = ListRepositoriesResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[35]
+	mi := &file_notary_v1_notary_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2435,7 +3224,7 @@ func (x *ListRepositoriesResponse) String() string {
 func (*ListRepositoriesResponse) ProtoMessage() {}
 
 func (x *ListRepositoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[35]
+	mi := &file_notary_v1_notary_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2448,7 +3237,7 @@ func (x *ListRepositoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRepositoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListRepositoriesResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{35}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListRepositoriesResponse) GetRepositories() []*Repository {
@@ -2460,14 +3249,14 @@ func (x *ListRepositoriesResponse) GetRepositories() []*Repository {
 
 type GetRepositoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetRepositoryRequest) Reset() {
 	*x = GetRepositoryRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[36]
+	mi := &file_notary_v1_notary_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2479,7 +3268,7 @@ func (x *GetRepositoryRequest) String() string {
 func (*GetRepositoryRequest) ProtoMessage() {}
 
 func (x *GetRepositoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[36]
+	mi := &file_notary_v1_notary_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2492,14 +3281,14 @@ func (x *GetRepositoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRepositoryRequest.ProtoReflect.Descriptor instead.
 func (*GetRepositoryRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{36}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{45}
 }
 
-func (x *GetRepositoryRequest) GetId() int32 {
+func (x *GetRepositoryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 type GetRepositoryResponse struct {
@@ -2511,7 +3300,7 @@ type GetRepositoryResponse struct {
 
 func (x *GetRepositoryResponse) Reset() {
 	*x = GetRepositoryResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[37]
+	mi := &file_notary_v1_notary_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2523,7 +3312,7 @@ func (x *GetRepositoryResponse) String() string {
 func (*GetRepositoryResponse) ProtoMessage() {}
 
 func (x *GetRepositoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[37]
+	mi := &file_notary_v1_notary_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2536,7 +3325,7 @@ func (x *GetRepositoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRepositoryResponse.ProtoReflect.Descriptor instead.
 func (*GetRepositoryResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{37}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *GetRepositoryResponse) GetRepository() *Repository {
@@ -2555,7 +3344,7 @@ type CreateRepositoryRequest struct {
 
 func (x *CreateRepositoryRequest) Reset() {
 	*x = CreateRepositoryRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[38]
+	mi := &file_notary_v1_notary_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2567,7 +3356,7 @@ func (x *CreateRepositoryRequest) String() string {
 func (*CreateRepositoryRequest) ProtoMessage() {}
 
 func (x *CreateRepositoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[38]
+	mi := &file_notary_v1_notary_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2580,7 +3369,7 @@ func (x *CreateRepositoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRepositoryRequest.ProtoReflect.Descriptor instead.
 func (*CreateRepositoryRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{38}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *CreateRepositoryRequest) GetRepository() *RepositoryInput {
@@ -2599,7 +3388,7 @@ type CreateRepositoryResponse struct {
 
 func (x *CreateRepositoryResponse) Reset() {
 	*x = CreateRepositoryResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[39]
+	mi := &file_notary_v1_notary_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2611,7 +3400,7 @@ func (x *CreateRepositoryResponse) String() string {
 func (*CreateRepositoryResponse) ProtoMessage() {}
 
 func (x *CreateRepositoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[39]
+	mi := &file_notary_v1_notary_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2624,7 +3413,7 @@ func (x *CreateRepositoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRepositoryResponse.ProtoReflect.Descriptor instead.
 func (*CreateRepositoryResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{39}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *CreateRepositoryResponse) GetRepository() *Repository {
@@ -2636,7 +3425,7 @@ func (x *CreateRepositoryResponse) GetRepository() *Repository {
 
 type UpdateRepositoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Repository    *RepositoryInput       `protobuf:"bytes,2,opt,name=repository,proto3" json:"repository,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2644,7 +3433,7 @@ type UpdateRepositoryRequest struct {
 
 func (x *UpdateRepositoryRequest) Reset() {
 	*x = UpdateRepositoryRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[40]
+	mi := &file_notary_v1_notary_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2656,7 +3445,7 @@ func (x *UpdateRepositoryRequest) String() string {
 func (*UpdateRepositoryRequest) ProtoMessage() {}
 
 func (x *UpdateRepositoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[40]
+	mi := &file_notary_v1_notary_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2669,14 +3458,14 @@ func (x *UpdateRepositoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRepositoryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRepositoryRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{40}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{49}
 }
 
-func (x *UpdateRepositoryRequest) GetId() int32 {
+func (x *UpdateRepositoryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *UpdateRepositoryRequest) GetRepository() *RepositoryInput {
@@ -2695,7 +3484,7 @@ type UpdateRepositoryResponse struct {
 
 func (x *UpdateRepositoryResponse) Reset() {
 	*x = UpdateRepositoryResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[41]
+	mi := &file_notary_v1_notary_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2707,7 +3496,7 @@ func (x *UpdateRepositoryResponse) String() string {
 func (*UpdateRepositoryResponse) ProtoMessage() {}
 
 func (x *UpdateRepositoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[41]
+	mi := &file_notary_v1_notary_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2720,7 +3509,7 @@ func (x *UpdateRepositoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRepositoryResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRepositoryResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{41}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *UpdateRepositoryResponse) GetRepository() *Repository {
@@ -2732,14 +3521,14 @@ func (x *UpdateRepositoryResponse) GetRepository() *Repository {
 
 type DeleteRepositoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteRepositoryRequest) Reset() {
 	*x = DeleteRepositoryRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[42]
+	mi := &file_notary_v1_notary_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2751,7 +3540,7 @@ func (x *DeleteRepositoryRequest) String() string {
 func (*DeleteRepositoryRequest) ProtoMessage() {}
 
 func (x *DeleteRepositoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[42]
+	mi := &file_notary_v1_notary_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2764,14 +3553,14 @@ func (x *DeleteRepositoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRepositoryRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRepositoryRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{42}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{51}
 }
 
-func (x *DeleteRepositoryRequest) GetId() int32 {
+func (x *DeleteRepositoryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 type DeleteRepositoryResponse struct {
@@ -2782,7 +3571,7 @@ type DeleteRepositoryResponse struct {
 
 func (x *DeleteRepositoryResponse) Reset() {
 	*x = DeleteRepositoryResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[43]
+	mi := &file_notary_v1_notary_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2794,7 +3583,7 @@ func (x *DeleteRepositoryResponse) String() string {
 func (*DeleteRepositoryResponse) ProtoMessage() {}
 
 func (x *DeleteRepositoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[43]
+	mi := &file_notary_v1_notary_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2807,23 +3596,25 @@ func (x *DeleteRepositoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRepositoryResponse.ProtoReflect.Descriptor instead.
 func (*DeleteRepositoryResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{43}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{52}
 }
 
 type PreviewRepositoryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// OCI architecture; empty = all.
 	Architecture string `protobuf:"bytes,2,opt,name=architecture,proto3" json:"architecture,omitempty"`
 	// Like flatpak's "#tag" remote suffix; empty = all tags. Flatpak's default is "latest".
 	Tag           string `protobuf:"bytes,3,opt,name=tag,proto3" json:"tag,omitempty"`
+	PageSize      int32  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Offset        int32  `protobuf:"varint,5,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PreviewRepositoryRequest) Reset() {
 	*x = PreviewRepositoryRequest{}
-	mi := &file_notary_v1_notary_proto_msgTypes[44]
+	mi := &file_notary_v1_notary_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2835,7 +3626,7 @@ func (x *PreviewRepositoryRequest) String() string {
 func (*PreviewRepositoryRequest) ProtoMessage() {}
 
 func (x *PreviewRepositoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[44]
+	mi := &file_notary_v1_notary_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2848,14 +3639,14 @@ func (x *PreviewRepositoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewRepositoryRequest.ProtoReflect.Descriptor instead.
 func (*PreviewRepositoryRequest) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{44}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{53}
 }
 
-func (x *PreviewRepositoryRequest) GetId() int32 {
+func (x *PreviewRepositoryRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
-	return 0
+	return ""
 }
 
 func (x *PreviewRepositoryRequest) GetArchitecture() string {
@@ -2872,16 +3663,100 @@ func (x *PreviewRepositoryRequest) GetTag() string {
 	return ""
 }
 
-type PreviewRepositoryResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Images        []*Image               `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
+func (x *PreviewRepositoryRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *PreviewRepositoryRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+// A runtime needed by served images but not served by the repository itself;
+// clients need another remote providing it or the install fails.
+type MissingRuntime struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Runtime ref without kind, e.g. "org.fedoraproject.Platform/x86_64/f44".
+	Runtime string `protobuf:"bytes,1,opt,name=runtime,proto3" json:"runtime,omitempty"`
+	// Flatpak IDs of the served images that need it, sorted.
+	NeededBy []string `protobuf:"bytes,2,rep,name=needed_by,json=neededBy,proto3" json:"needed_by,omitempty"`
+	// Registries (other than the repository's) that have it indexed, if any.
+	AvailableIn   []*RegistryRef `protobuf:"bytes,3,rep,name=available_in,json=availableIn,proto3" json:"available_in,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
+func (x *MissingRuntime) Reset() {
+	*x = MissingRuntime{}
+	mi := &file_notary_v1_notary_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MissingRuntime) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MissingRuntime) ProtoMessage() {}
+
+func (x *MissingRuntime) ProtoReflect() protoreflect.Message {
+	mi := &file_notary_v1_notary_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MissingRuntime.ProtoReflect.Descriptor instead.
+func (*MissingRuntime) Descriptor() ([]byte, []int) {
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *MissingRuntime) GetRuntime() string {
+	if x != nil {
+		return x.Runtime
+	}
+	return ""
+}
+
+func (x *MissingRuntime) GetNeededBy() []string {
+	if x != nil {
+		return x.NeededBy
+	}
+	return nil
+}
+
+func (x *MissingRuntime) GetAvailableIn() []*RegistryRef {
+	if x != nil {
+		return x.AvailableIn
+	}
+	return nil
+}
+
+type PreviewRepositoryResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Ordered by ref, then repository.
+	Images []*Image `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
+	// Total number of images the index would serve for these filters.
+	TotalSize int32 `protobuf:"varint,2,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	// Computed over the whole selection (not just this page).
+	MissingRuntimes []*MissingRuntime `protobuf:"bytes,3,rep,name=missing_runtimes,json=missingRuntimes,proto3" json:"missing_runtimes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
 func (x *PreviewRepositoryResponse) Reset() {
 	*x = PreviewRepositoryResponse{}
-	mi := &file_notary_v1_notary_proto_msgTypes[45]
+	mi := &file_notary_v1_notary_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2893,7 +3768,7 @@ func (x *PreviewRepositoryResponse) String() string {
 func (*PreviewRepositoryResponse) ProtoMessage() {}
 
 func (x *PreviewRepositoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_notary_v1_notary_proto_msgTypes[45]
+	mi := &file_notary_v1_notary_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2906,7 +3781,7 @@ func (x *PreviewRepositoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreviewRepositoryResponse.ProtoReflect.Descriptor instead.
 func (*PreviewRepositoryResponse) Descriptor() ([]byte, []int) {
-	return file_notary_v1_notary_proto_rawDescGZIP(), []int{45}
+	return file_notary_v1_notary_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *PreviewRepositoryResponse) GetImages() []*Image {
@@ -2916,17 +3791,32 @@ func (x *PreviewRepositoryResponse) GetImages() []*Image {
 	return nil
 }
 
+func (x *PreviewRepositoryResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+func (x *PreviewRepositoryResponse) GetMissingRuntimes() []*MissingRuntime {
+	if x != nil {
+		return x.MissingRuntimes
+	}
+	return nil
+}
+
 var File_notary_v1_notary_proto protoreflect.FileDescriptor
 
 const file_notary_v1_notary_proto_rawDesc = "" +
 	"\n" +
 	"\x16notary/v1/notary.proto\x12\tnotary.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x10\n" +
-	"\x0eGetInfoRequest\"m\n" +
+	"\x0eGetInfoRequest\"\x92\x01\n" +
 	"\x0fGetInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x1d\n" +
 	"\n" +
 	"public_url\x18\x02 \x01(\tR\tpublicUrl\x12!\n" +
-	"\fauth_enabled\x18\x03 \x01(\bR\vauthEnabled\"\x0e\n" +
+	"\fauth_enabled\x18\x03 \x01(\bR\vauthEnabled\x12#\n" +
+	"\rembedded_sync\x18\x04 \x01(\bR\fembeddedSync\"\x0e\n" +
 	"\fGetMeRequest\"J\n" +
 	"\x04User\x12\x18\n" +
 	"\asubject\x18\x01 \x01(\tR\asubject\x12\x14\n" +
@@ -2946,9 +3836,9 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\x04apps\x18\x04 \x01(\x05R\x04apps\x12\x1a\n" +
 	"\bruntimes\x18\x05 \x01(\x05R\bruntimes\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
-	"\x0eLogoutResponse\"\xaa\x06\n" +
+	"\x0eLogoutResponse\"\xbf\a\n" +
 	"\bRegistry\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x10\n" +
 	"\x03url\x18\x03 \x01(\tR\x03url\x12\x1a\n" +
 	"\binsecure\x18\x04 \x01(\bR\binsecure\x120\n" +
@@ -2974,7 +3864,10 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x9a\x03\n" +
+	"updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
+	"\x0esync_requested\x18\x15 \x01(\bR\rsyncRequested\x124\n" +
+	"\x16sync_repositories_done\x18\x16 \x01(\x05R\x14syncRepositoriesDone\x126\n" +
+	"\x17sync_repositories_total\x18\x17 \x01(\x05R\x15syncRepositoriesTotal\"\x9a\x03\n" +
 	"\rRegistryInput\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x1a\n" +
@@ -2996,7 +3889,7 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"registries\x18\x01 \x03(\v2\x13.notary.v1.RegistryR\n" +
 	"registries\"$\n" +
 	"\x12GetRegistryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"F\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x13GetRegistryResponse\x12/\n" +
 	"\bregistry\x18\x01 \x01(\v2\x13.notary.v1.RegistryR\bregistry\"M\n" +
 	"\x15CreateRegistryRequest\x124\n" +
@@ -3004,29 +3897,29 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\x16CreateRegistryResponse\x12/\n" +
 	"\bregistry\x18\x01 \x01(\v2\x13.notary.v1.RegistryR\bregistry\"]\n" +
 	"\x15UpdateRegistryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x124\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\bregistry\x18\x02 \x01(\v2\x18.notary.v1.RegistryInputR\bregistry\"I\n" +
 	"\x16UpdateRegistryResponse\x12/\n" +
 	"\bregistry\x18\x01 \x01(\v2\x13.notary.v1.RegistryR\bregistry\"'\n" +
 	"\x15DeleteRegistryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"\x18\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x18\n" +
 	"\x16DeleteRegistryResponse\"%\n" +
 	"\x13SyncRegistryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"G\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"G\n" +
 	"\x14SyncRegistryResponse\x12/\n" +
 	"\bregistry\x18\x01 \x01(\v2\x13.notary.v1.RegistryR\bregistry\"g\n" +
 	"\x13TestRegistryRequest\x124\n" +
 	"\bregistry\x18\x01 \x01(\v2\x18.notary.v1.RegistryInputR\bregistry\x12\x13\n" +
-	"\x02id\x18\x02 \x01(\x05H\x00R\x02id\x88\x01\x01B\x05\n" +
+	"\x02id\x18\x02 \x01(\tH\x00R\x02id\x88\x01\x01B\x05\n" +
 	"\x03_id\"\x9a\x01\n" +
 	"\x14TestRegistryResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\x12+\n" +
 	"\x11catalog_supported\x18\x03 \x01(\bR\x10catalogSupported\x12/\n" +
-	"\x13sample_repositories\x18\x04 \x03(\tR\x12sampleRepositories\"\xa1\x05\n" +
+	"\x13sample_repositories\x18\x04 \x03(\tR\x12sampleRepositories\"\x84\x06\n" +
 	"\x05Image\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1f\n" +
-	"\vregistry_id\x18\x02 \x01(\x05R\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vregistry_id\x18\x02 \x01(\tR\n" +
 	"registryId\x12#\n" +
 	"\rregistry_name\x18\x03 \x01(\tR\fregistryName\x12\x1e\n" +
 	"\n" +
@@ -3053,16 +3946,91 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\acreated\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\acreated\x12\x19\n" +
 	"\bhas_icon\x18\x15 \x01(\bR\ahasIcon\x129\n" +
 	"\n" +
-	"indexed_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tindexedAt\"r\n" +
+	"indexed_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tindexedAt\x12\x18\n" +
+	"\aruntime\x18\x17 \x01(\tR\aruntime\x12!\n" +
+	"\fextension_of\x18\x18 \x01(\tR\vextensionOf\x12$\n" +
+	"\x0ehas_extra_data\x18\x19 \x01(\bR\fhasExtraData\"\xea\x01\n" +
 	"\x11ListImagesRequest\x12\x1f\n" +
-	"\vregistry_id\x18\x01 \x01(\x05R\n" +
+	"\vregistry_id\x18\x01 \x01(\tR\n" +
 	"registryId\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12&\n" +
-	"\x04kind\x18\x03 \x01(\x0e2\x12.notary.v1.RefKindR\x04kind\">\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\x12.notary.v1.RefKindR\x04kind\x12\x1d\n" +
+	"\n" +
+	"flatpak_id\x18\x04 \x01(\tR\tflatpakId\x12\"\n" +
+	"\farchitecture\x18\x05 \x01(\tR\farchitecture\x12\x1b\n" +
+	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\x12\x16\n" +
+	"\x06offset\x18\a \x01(\x05R\x06offset\"]\n" +
 	"\x12ListImagesResponse\x12(\n" +
-	"\x06images\x18\x01 \x03(\v2\x10.notary.v1.ImageR\x06images\"!\n" +
+	"\x06images\x18\x01 \x03(\v2\x10.notary.v1.ImageR\x06images\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x02 \x01(\x05R\ttotalSize\"\x8a\x01\n" +
+	"\x1cListImageRepositoriesRequest\x12\x1f\n" +
+	"\vregistry_id\x18\x01 \x01(\tR\n" +
+	"registryId\x12\x14\n" +
+	"\x05query\x18\x02 \x01(\tR\x05query\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x16\n" +
+	"\x06offset\x18\x04 \x01(\x05R\x06offset\"\xbf\x02\n" +
+	"\x0fImageRepository\x12\x1f\n" +
+	"\vregistry_id\x18\x01 \x01(\tR\n" +
+	"registryId\x12#\n" +
+	"\rregistry_name\x18\x02 \x01(\tR\fregistryName\x12\x1e\n" +
+	"\n" +
+	"repository\x18\x03 \x01(\tR\n" +
+	"repository\x12\x1f\n" +
+	"\vflatpak_ids\x18\x04 \x03(\tR\n" +
+	"flatpakIds\x12\x12\n" +
+	"\x04name\x18\x05 \x01(\tR\x04name\x12&\n" +
+	"\x04kind\x18\x06 \x01(\x0e2\x12.notary.v1.RefKindR\x04kind\x12\x1f\n" +
+	"\vimage_count\x18\a \x01(\x05R\n" +
+	"imageCount\x12$\n" +
+	"\rarchitectures\x18\b \x03(\tR\rarchitectures\x12\"\n" +
+	"\ricon_image_id\x18\t \x01(\tR\viconImageId\"~\n" +
+	"\x1dListImageRepositoriesResponse\x12>\n" +
+	"\frepositories\x18\x01 \x03(\v2\x1a.notary.v1.ImageRepositoryR\frepositories\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x02 \x01(\x05R\ttotalSize\"1\n" +
+	"\vRegistryRef\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\xb3\x03\n" +
+	"\aPackage\x12&\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x12.notary.v1.RefKindR\x04kind\x12\x1d\n" +
+	"\n" +
+	"flatpak_id\x18\x02 \x01(\tR\tflatpakId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x18\n" +
+	"\asummary\x18\x04 \x01(\tR\asummary\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12$\n" +
+	"\rarchitectures\x18\x06 \x03(\tR\rarchitectures\x12\x1a\n" +
+	"\bbranches\x18\a \x03(\tR\bbranches\x126\n" +
+	"\n" +
+	"registries\x18\b \x03(\v2\x16.notary.v1.RegistryRefR\n" +
+	"registries\x12\x1f\n" +
+	"\vimage_count\x18\t \x01(\x05R\n" +
+	"imageCount\x12\"\n" +
+	"\ricon_image_id\x18\n" +
+	" \x01(\tR\viconImageId\x12$\n" +
+	"\x0ehas_extra_data\x18\v \x01(\bR\fhasExtraData\x124\n" +
+	"\aupdated\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\aupdated\"\xcd\x01\n" +
+	"\x13ListPackagesRequest\x12\x1f\n" +
+	"\vregistry_id\x18\x01 \x01(\tR\n" +
+	"registryId\x12\x14\n" +
+	"\x05query\x18\x02 \x01(\tR\x05query\x12&\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\x12.notary.v1.RefKindR\x04kind\x12\"\n" +
+	"\farchitecture\x18\x04 \x01(\tR\farchitecture\x12\x1b\n" +
+	"\tpage_size\x18\x05 \x01(\x05R\bpageSize\x12\x16\n" +
+	"\x06offset\x18\x06 \x01(\x05R\x06offset\"e\n" +
+	"\x14ListPackagesResponse\x12.\n" +
+	"\bpackages\x18\x01 \x03(\v2\x12.notary.v1.PackageR\bpackages\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x02 \x01(\x05R\ttotalSize\"Z\n" +
+	"\x11GetPackageRequest\x12&\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x12.notary.v1.RefKindR\x04kind\x12\x1d\n" +
+	"\n" +
+	"flatpak_id\x18\x02 \x01(\tR\tflatpakId\"p\n" +
+	"\x12GetPackageResponse\x12,\n" +
+	"\apackage\x18\x01 \x01(\v2\x12.notary.v1.PackageR\apackage\x12,\n" +
+	"\bvariants\x18\x02 \x03(\v2\x10.notary.v1.ImageR\bvariants\"!\n" +
 	"\x0fGetImageRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"\xd2\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xd2\x01\n" +
 	"\x10GetImageResponse\x12&\n" +
 	"\x05image\x18\x01 \x01(\v2\x10.notary.v1.ImageR\x05image\x12?\n" +
 	"\x06labels\x18\x02 \x03(\v2'.notary.v1.GetImageResponse.LabelsEntryR\x06labels\x12\x1a\n" +
@@ -3083,12 +4051,12 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\x05index\x18\x03 \x01(\tR\x05index\"\xbd\x03\n" +
 	"\n" +
 	"Repository\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1a\n" +
 	"\bhomepage\x18\x05 \x01(\tR\bhomepage\x12\x1f\n" +
-	"\vregistry_id\x18\x06 \x01(\x05R\n" +
+	"\vregistry_id\x18\x06 \x01(\tR\n" +
 	"registryId\x12#\n" +
 	"\rregistry_name\x18\a \x01(\tR\fregistryName\x12+\n" +
 	"\asources\x18\b \x03(\v2\x11.notary.v1.SourceR\asources\x12\x1f\n" +
@@ -3105,14 +4073,14 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1a\n" +
 	"\bhomepage\x18\x04 \x01(\tR\bhomepage\x12\x1f\n" +
-	"\vregistry_id\x18\x05 \x01(\x05R\n" +
+	"\vregistry_id\x18\x05 \x01(\tR\n" +
 	"registryId\x12+\n" +
 	"\asources\x18\x06 \x03(\v2\x11.notary.v1.SourceR\asources\"\x19\n" +
 	"\x17ListRepositoriesRequest\"U\n" +
 	"\x18ListRepositoriesResponse\x129\n" +
 	"\frepositories\x18\x01 \x03(\v2\x15.notary.v1.RepositoryR\frepositories\"&\n" +
 	"\x14GetRepositoryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"N\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"N\n" +
 	"\x15GetRepositoryResponse\x125\n" +
 	"\n" +
 	"repository\x18\x01 \x01(\v2\x15.notary.v1.RepositoryR\n" +
@@ -3126,7 +4094,7 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"repository\x18\x01 \x01(\v2\x15.notary.v1.RepositoryR\n" +
 	"repository\"e\n" +
 	"\x17UpdateRepositoryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12:\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12:\n" +
 	"\n" +
 	"repository\x18\x02 \x01(\v2\x1a.notary.v1.RepositoryInputR\n" +
 	"repository\"Q\n" +
@@ -3135,14 +4103,23 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"repository\x18\x01 \x01(\v2\x15.notary.v1.RepositoryR\n" +
 	"repository\")\n" +
 	"\x17DeleteRepositoryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\"\x1a\n" +
-	"\x18DeleteRepositoryResponse\"`\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x1a\n" +
+	"\x18DeleteRepositoryResponse\"\x95\x01\n" +
 	"\x18PreviewRepositoryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02id\x12\"\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\farchitecture\x18\x02 \x01(\tR\farchitecture\x12\x10\n" +
-	"\x03tag\x18\x03 \x01(\tR\x03tag\"E\n" +
+	"\x03tag\x18\x03 \x01(\tR\x03tag\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x16\n" +
+	"\x06offset\x18\x05 \x01(\x05R\x06offset\"\x82\x01\n" +
+	"\x0eMissingRuntime\x12\x18\n" +
+	"\aruntime\x18\x01 \x01(\tR\aruntime\x12\x1b\n" +
+	"\tneeded_by\x18\x02 \x03(\tR\bneededBy\x129\n" +
+	"\favailable_in\x18\x03 \x03(\v2\x16.notary.v1.RegistryRefR\vavailableIn\"\xaa\x01\n" +
 	"\x19PreviewRepositoryResponse\x12(\n" +
-	"\x06images\x18\x01 \x03(\v2\x10.notary.v1.ImageR\x06images*S\n" +
+	"\x06images\x18\x01 \x03(\v2\x10.notary.v1.ImageR\x06images\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x02 \x01(\x05R\ttotalSize\x12D\n" +
+	"\x10missing_runtimes\x18\x03 \x03(\v2\x19.notary.v1.MissingRuntimeR\x0fmissingRuntimes*S\n" +
 	"\bAuthType\x12\x19\n" +
 	"\x15AUTH_TYPE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13AUTH_TYPE_ANONYMOUS\x10\x01\x12\x13\n" +
@@ -3169,11 +4146,15 @@ const file_notary_v1_notary_proto_rawDesc = "" +
 	"\x0eUpdateRegistry\x12 .notary.v1.UpdateRegistryRequest\x1a!.notary.v1.UpdateRegistryResponse\x12U\n" +
 	"\x0eDeleteRegistry\x12 .notary.v1.DeleteRegistryRequest\x1a!.notary.v1.DeleteRegistryResponse\x12O\n" +
 	"\fSyncRegistry\x12\x1e.notary.v1.SyncRegistryRequest\x1a\x1f.notary.v1.SyncRegistryResponse\x12O\n" +
-	"\fTestRegistry\x12\x1e.notary.v1.TestRegistryRequest\x1a\x1f.notary.v1.TestRegistryResponse2\x9e\x01\n" +
+	"\fTestRegistry\x12\x1e.notary.v1.TestRegistryRequest\x1a\x1f.notary.v1.TestRegistryResponse2\xa6\x03\n" +
 	"\fImageService\x12I\n" +
 	"\n" +
 	"ListImages\x12\x1c.notary.v1.ListImagesRequest\x1a\x1d.notary.v1.ListImagesResponse\x12C\n" +
-	"\bGetImage\x12\x1a.notary.v1.GetImageRequest\x1a\x1b.notary.v1.GetImageResponse2\xbb\x04\n" +
+	"\bGetImage\x12\x1a.notary.v1.GetImageRequest\x1a\x1b.notary.v1.GetImageResponse\x12j\n" +
+	"\x15ListImageRepositories\x12'.notary.v1.ListImageRepositoriesRequest\x1a(.notary.v1.ListImageRepositoriesResponse\x12O\n" +
+	"\fListPackages\x12\x1e.notary.v1.ListPackagesRequest\x1a\x1f.notary.v1.ListPackagesResponse\x12I\n" +
+	"\n" +
+	"GetPackage\x12\x1c.notary.v1.GetPackageRequest\x1a\x1d.notary.v1.GetPackageResponse2\xbb\x04\n" +
 	"\x11RepositoryService\x12[\n" +
 	"\x10ListRepositories\x12\".notary.v1.ListRepositoriesRequest\x1a#.notary.v1.ListRepositoriesResponse\x12R\n" +
 	"\rGetRepository\x12\x1f.notary.v1.GetRepositoryRequest\x1a .notary.v1.GetRepositoryResponse\x12[\n" +
@@ -3195,67 +4176,77 @@ func file_notary_v1_notary_proto_rawDescGZIP() []byte {
 }
 
 var file_notary_v1_notary_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_notary_v1_notary_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_notary_v1_notary_proto_msgTypes = make([]protoimpl.MessageInfo, 57)
 var file_notary_v1_notary_proto_goTypes = []any{
-	(AuthType)(0),                     // 0: notary.v1.AuthType
-	(SyncState)(0),                    // 1: notary.v1.SyncState
-	(RefKind)(0),                      // 2: notary.v1.RefKind
-	(*GetInfoRequest)(nil),            // 3: notary.v1.GetInfoRequest
-	(*GetInfoResponse)(nil),           // 4: notary.v1.GetInfoResponse
-	(*GetMeRequest)(nil),              // 5: notary.v1.GetMeRequest
-	(*User)(nil),                      // 6: notary.v1.User
-	(*GetMeResponse)(nil),             // 7: notary.v1.GetMeResponse
-	(*GetOverviewRequest)(nil),        // 8: notary.v1.GetOverviewRequest
-	(*GetOverviewResponse)(nil),       // 9: notary.v1.GetOverviewResponse
-	(*LogoutRequest)(nil),             // 10: notary.v1.LogoutRequest
-	(*LogoutResponse)(nil),            // 11: notary.v1.LogoutResponse
-	(*Registry)(nil),                  // 12: notary.v1.Registry
-	(*RegistryInput)(nil),             // 13: notary.v1.RegistryInput
-	(*ListRegistriesRequest)(nil),     // 14: notary.v1.ListRegistriesRequest
-	(*ListRegistriesResponse)(nil),    // 15: notary.v1.ListRegistriesResponse
-	(*GetRegistryRequest)(nil),        // 16: notary.v1.GetRegistryRequest
-	(*GetRegistryResponse)(nil),       // 17: notary.v1.GetRegistryResponse
-	(*CreateRegistryRequest)(nil),     // 18: notary.v1.CreateRegistryRequest
-	(*CreateRegistryResponse)(nil),    // 19: notary.v1.CreateRegistryResponse
-	(*UpdateRegistryRequest)(nil),     // 20: notary.v1.UpdateRegistryRequest
-	(*UpdateRegistryResponse)(nil),    // 21: notary.v1.UpdateRegistryResponse
-	(*DeleteRegistryRequest)(nil),     // 22: notary.v1.DeleteRegistryRequest
-	(*DeleteRegistryResponse)(nil),    // 23: notary.v1.DeleteRegistryResponse
-	(*SyncRegistryRequest)(nil),       // 24: notary.v1.SyncRegistryRequest
-	(*SyncRegistryResponse)(nil),      // 25: notary.v1.SyncRegistryResponse
-	(*TestRegistryRequest)(nil),       // 26: notary.v1.TestRegistryRequest
-	(*TestRegistryResponse)(nil),      // 27: notary.v1.TestRegistryResponse
-	(*Image)(nil),                     // 28: notary.v1.Image
-	(*ListImagesRequest)(nil),         // 29: notary.v1.ListImagesRequest
-	(*ListImagesResponse)(nil),        // 30: notary.v1.ListImagesResponse
-	(*GetImageRequest)(nil),           // 31: notary.v1.GetImageRequest
-	(*GetImageResponse)(nil),          // 32: notary.v1.GetImageResponse
-	(*Source)(nil),                    // 33: notary.v1.Source
-	(*RepositoryUrls)(nil),            // 34: notary.v1.RepositoryUrls
-	(*Repository)(nil),                // 35: notary.v1.Repository
-	(*RepositoryInput)(nil),           // 36: notary.v1.RepositoryInput
-	(*ListRepositoriesRequest)(nil),   // 37: notary.v1.ListRepositoriesRequest
-	(*ListRepositoriesResponse)(nil),  // 38: notary.v1.ListRepositoriesResponse
-	(*GetRepositoryRequest)(nil),      // 39: notary.v1.GetRepositoryRequest
-	(*GetRepositoryResponse)(nil),     // 40: notary.v1.GetRepositoryResponse
-	(*CreateRepositoryRequest)(nil),   // 41: notary.v1.CreateRepositoryRequest
-	(*CreateRepositoryResponse)(nil),  // 42: notary.v1.CreateRepositoryResponse
-	(*UpdateRepositoryRequest)(nil),   // 43: notary.v1.UpdateRepositoryRequest
-	(*UpdateRepositoryResponse)(nil),  // 44: notary.v1.UpdateRepositoryResponse
-	(*DeleteRepositoryRequest)(nil),   // 45: notary.v1.DeleteRepositoryRequest
-	(*DeleteRepositoryResponse)(nil),  // 46: notary.v1.DeleteRepositoryResponse
-	(*PreviewRepositoryRequest)(nil),  // 47: notary.v1.PreviewRepositoryRequest
-	(*PreviewRepositoryResponse)(nil), // 48: notary.v1.PreviewRepositoryResponse
-	nil,                               // 49: notary.v1.GetImageResponse.LabelsEntry
-	(*timestamppb.Timestamp)(nil),     // 50: google.protobuf.Timestamp
+	(AuthType)(0),                         // 0: notary.v1.AuthType
+	(SyncState)(0),                        // 1: notary.v1.SyncState
+	(RefKind)(0),                          // 2: notary.v1.RefKind
+	(*GetInfoRequest)(nil),                // 3: notary.v1.GetInfoRequest
+	(*GetInfoResponse)(nil),               // 4: notary.v1.GetInfoResponse
+	(*GetMeRequest)(nil),                  // 5: notary.v1.GetMeRequest
+	(*User)(nil),                          // 6: notary.v1.User
+	(*GetMeResponse)(nil),                 // 7: notary.v1.GetMeResponse
+	(*GetOverviewRequest)(nil),            // 8: notary.v1.GetOverviewRequest
+	(*GetOverviewResponse)(nil),           // 9: notary.v1.GetOverviewResponse
+	(*LogoutRequest)(nil),                 // 10: notary.v1.LogoutRequest
+	(*LogoutResponse)(nil),                // 11: notary.v1.LogoutResponse
+	(*Registry)(nil),                      // 12: notary.v1.Registry
+	(*RegistryInput)(nil),                 // 13: notary.v1.RegistryInput
+	(*ListRegistriesRequest)(nil),         // 14: notary.v1.ListRegistriesRequest
+	(*ListRegistriesResponse)(nil),        // 15: notary.v1.ListRegistriesResponse
+	(*GetRegistryRequest)(nil),            // 16: notary.v1.GetRegistryRequest
+	(*GetRegistryResponse)(nil),           // 17: notary.v1.GetRegistryResponse
+	(*CreateRegistryRequest)(nil),         // 18: notary.v1.CreateRegistryRequest
+	(*CreateRegistryResponse)(nil),        // 19: notary.v1.CreateRegistryResponse
+	(*UpdateRegistryRequest)(nil),         // 20: notary.v1.UpdateRegistryRequest
+	(*UpdateRegistryResponse)(nil),        // 21: notary.v1.UpdateRegistryResponse
+	(*DeleteRegistryRequest)(nil),         // 22: notary.v1.DeleteRegistryRequest
+	(*DeleteRegistryResponse)(nil),        // 23: notary.v1.DeleteRegistryResponse
+	(*SyncRegistryRequest)(nil),           // 24: notary.v1.SyncRegistryRequest
+	(*SyncRegistryResponse)(nil),          // 25: notary.v1.SyncRegistryResponse
+	(*TestRegistryRequest)(nil),           // 26: notary.v1.TestRegistryRequest
+	(*TestRegistryResponse)(nil),          // 27: notary.v1.TestRegistryResponse
+	(*Image)(nil),                         // 28: notary.v1.Image
+	(*ListImagesRequest)(nil),             // 29: notary.v1.ListImagesRequest
+	(*ListImagesResponse)(nil),            // 30: notary.v1.ListImagesResponse
+	(*ListImageRepositoriesRequest)(nil),  // 31: notary.v1.ListImageRepositoriesRequest
+	(*ImageRepository)(nil),               // 32: notary.v1.ImageRepository
+	(*ListImageRepositoriesResponse)(nil), // 33: notary.v1.ListImageRepositoriesResponse
+	(*RegistryRef)(nil),                   // 34: notary.v1.RegistryRef
+	(*Package)(nil),                       // 35: notary.v1.Package
+	(*ListPackagesRequest)(nil),           // 36: notary.v1.ListPackagesRequest
+	(*ListPackagesResponse)(nil),          // 37: notary.v1.ListPackagesResponse
+	(*GetPackageRequest)(nil),             // 38: notary.v1.GetPackageRequest
+	(*GetPackageResponse)(nil),            // 39: notary.v1.GetPackageResponse
+	(*GetImageRequest)(nil),               // 40: notary.v1.GetImageRequest
+	(*GetImageResponse)(nil),              // 41: notary.v1.GetImageResponse
+	(*Source)(nil),                        // 42: notary.v1.Source
+	(*RepositoryUrls)(nil),                // 43: notary.v1.RepositoryUrls
+	(*Repository)(nil),                    // 44: notary.v1.Repository
+	(*RepositoryInput)(nil),               // 45: notary.v1.RepositoryInput
+	(*ListRepositoriesRequest)(nil),       // 46: notary.v1.ListRepositoriesRequest
+	(*ListRepositoriesResponse)(nil),      // 47: notary.v1.ListRepositoriesResponse
+	(*GetRepositoryRequest)(nil),          // 48: notary.v1.GetRepositoryRequest
+	(*GetRepositoryResponse)(nil),         // 49: notary.v1.GetRepositoryResponse
+	(*CreateRepositoryRequest)(nil),       // 50: notary.v1.CreateRepositoryRequest
+	(*CreateRepositoryResponse)(nil),      // 51: notary.v1.CreateRepositoryResponse
+	(*UpdateRepositoryRequest)(nil),       // 52: notary.v1.UpdateRepositoryRequest
+	(*UpdateRepositoryResponse)(nil),      // 53: notary.v1.UpdateRepositoryResponse
+	(*DeleteRepositoryRequest)(nil),       // 54: notary.v1.DeleteRepositoryRequest
+	(*DeleteRepositoryResponse)(nil),      // 55: notary.v1.DeleteRepositoryResponse
+	(*PreviewRepositoryRequest)(nil),      // 56: notary.v1.PreviewRepositoryRequest
+	(*MissingRuntime)(nil),                // 57: notary.v1.MissingRuntime
+	(*PreviewRepositoryResponse)(nil),     // 58: notary.v1.PreviewRepositoryResponse
+	nil,                                   // 59: notary.v1.GetImageResponse.LabelsEntry
+	(*timestamppb.Timestamp)(nil),         // 60: google.protobuf.Timestamp
 }
 var file_notary_v1_notary_proto_depIdxs = []int32{
 	6,  // 0: notary.v1.GetMeResponse.user:type_name -> notary.v1.User
 	0,  // 1: notary.v1.Registry.auth_type:type_name -> notary.v1.AuthType
 	1,  // 2: notary.v1.Registry.sync_state:type_name -> notary.v1.SyncState
-	50, // 3: notary.v1.Registry.last_sync_at:type_name -> google.protobuf.Timestamp
-	50, // 4: notary.v1.Registry.created_at:type_name -> google.protobuf.Timestamp
-	50, // 5: notary.v1.Registry.updated_at:type_name -> google.protobuf.Timestamp
+	60, // 3: notary.v1.Registry.last_sync_at:type_name -> google.protobuf.Timestamp
+	60, // 4: notary.v1.Registry.created_at:type_name -> google.protobuf.Timestamp
+	60, // 5: notary.v1.Registry.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 6: notary.v1.RegistryInput.auth_type:type_name -> notary.v1.AuthType
 	12, // 7: notary.v1.ListRegistriesResponse.registries:type_name -> notary.v1.Registry
 	12, // 8: notary.v1.GetRegistryResponse.registry:type_name -> notary.v1.Registry
@@ -3266,67 +4257,85 @@ var file_notary_v1_notary_proto_depIdxs = []int32{
 	12, // 13: notary.v1.SyncRegistryResponse.registry:type_name -> notary.v1.Registry
 	13, // 14: notary.v1.TestRegistryRequest.registry:type_name -> notary.v1.RegistryInput
 	2,  // 15: notary.v1.Image.kind:type_name -> notary.v1.RefKind
-	50, // 16: notary.v1.Image.created:type_name -> google.protobuf.Timestamp
-	50, // 17: notary.v1.Image.indexed_at:type_name -> google.protobuf.Timestamp
+	60, // 16: notary.v1.Image.created:type_name -> google.protobuf.Timestamp
+	60, // 17: notary.v1.Image.indexed_at:type_name -> google.protobuf.Timestamp
 	2,  // 18: notary.v1.ListImagesRequest.kind:type_name -> notary.v1.RefKind
 	28, // 19: notary.v1.ListImagesResponse.images:type_name -> notary.v1.Image
-	28, // 20: notary.v1.GetImageResponse.image:type_name -> notary.v1.Image
-	49, // 21: notary.v1.GetImageResponse.labels:type_name -> notary.v1.GetImageResponse.LabelsEntry
-	33, // 22: notary.v1.Repository.sources:type_name -> notary.v1.Source
-	34, // 23: notary.v1.Repository.urls:type_name -> notary.v1.RepositoryUrls
-	50, // 24: notary.v1.Repository.created_at:type_name -> google.protobuf.Timestamp
-	50, // 25: notary.v1.Repository.updated_at:type_name -> google.protobuf.Timestamp
-	33, // 26: notary.v1.RepositoryInput.sources:type_name -> notary.v1.Source
-	35, // 27: notary.v1.ListRepositoriesResponse.repositories:type_name -> notary.v1.Repository
-	35, // 28: notary.v1.GetRepositoryResponse.repository:type_name -> notary.v1.Repository
-	36, // 29: notary.v1.CreateRepositoryRequest.repository:type_name -> notary.v1.RepositoryInput
-	35, // 30: notary.v1.CreateRepositoryResponse.repository:type_name -> notary.v1.Repository
-	36, // 31: notary.v1.UpdateRepositoryRequest.repository:type_name -> notary.v1.RepositoryInput
-	35, // 32: notary.v1.UpdateRepositoryResponse.repository:type_name -> notary.v1.Repository
-	28, // 33: notary.v1.PreviewRepositoryResponse.images:type_name -> notary.v1.Image
-	3,  // 34: notary.v1.SystemService.GetInfo:input_type -> notary.v1.GetInfoRequest
-	5,  // 35: notary.v1.SystemService.GetMe:input_type -> notary.v1.GetMeRequest
-	8,  // 36: notary.v1.SystemService.GetOverview:input_type -> notary.v1.GetOverviewRequest
-	10, // 37: notary.v1.SystemService.Logout:input_type -> notary.v1.LogoutRequest
-	14, // 38: notary.v1.RegistryService.ListRegistries:input_type -> notary.v1.ListRegistriesRequest
-	16, // 39: notary.v1.RegistryService.GetRegistry:input_type -> notary.v1.GetRegistryRequest
-	18, // 40: notary.v1.RegistryService.CreateRegistry:input_type -> notary.v1.CreateRegistryRequest
-	20, // 41: notary.v1.RegistryService.UpdateRegistry:input_type -> notary.v1.UpdateRegistryRequest
-	22, // 42: notary.v1.RegistryService.DeleteRegistry:input_type -> notary.v1.DeleteRegistryRequest
-	24, // 43: notary.v1.RegistryService.SyncRegistry:input_type -> notary.v1.SyncRegistryRequest
-	26, // 44: notary.v1.RegistryService.TestRegistry:input_type -> notary.v1.TestRegistryRequest
-	29, // 45: notary.v1.ImageService.ListImages:input_type -> notary.v1.ListImagesRequest
-	31, // 46: notary.v1.ImageService.GetImage:input_type -> notary.v1.GetImageRequest
-	37, // 47: notary.v1.RepositoryService.ListRepositories:input_type -> notary.v1.ListRepositoriesRequest
-	39, // 48: notary.v1.RepositoryService.GetRepository:input_type -> notary.v1.GetRepositoryRequest
-	41, // 49: notary.v1.RepositoryService.CreateRepository:input_type -> notary.v1.CreateRepositoryRequest
-	43, // 50: notary.v1.RepositoryService.UpdateRepository:input_type -> notary.v1.UpdateRepositoryRequest
-	45, // 51: notary.v1.RepositoryService.DeleteRepository:input_type -> notary.v1.DeleteRepositoryRequest
-	47, // 52: notary.v1.RepositoryService.PreviewRepository:input_type -> notary.v1.PreviewRepositoryRequest
-	4,  // 53: notary.v1.SystemService.GetInfo:output_type -> notary.v1.GetInfoResponse
-	7,  // 54: notary.v1.SystemService.GetMe:output_type -> notary.v1.GetMeResponse
-	9,  // 55: notary.v1.SystemService.GetOverview:output_type -> notary.v1.GetOverviewResponse
-	11, // 56: notary.v1.SystemService.Logout:output_type -> notary.v1.LogoutResponse
-	15, // 57: notary.v1.RegistryService.ListRegistries:output_type -> notary.v1.ListRegistriesResponse
-	17, // 58: notary.v1.RegistryService.GetRegistry:output_type -> notary.v1.GetRegistryResponse
-	19, // 59: notary.v1.RegistryService.CreateRegistry:output_type -> notary.v1.CreateRegistryResponse
-	21, // 60: notary.v1.RegistryService.UpdateRegistry:output_type -> notary.v1.UpdateRegistryResponse
-	23, // 61: notary.v1.RegistryService.DeleteRegistry:output_type -> notary.v1.DeleteRegistryResponse
-	25, // 62: notary.v1.RegistryService.SyncRegistry:output_type -> notary.v1.SyncRegistryResponse
-	27, // 63: notary.v1.RegistryService.TestRegistry:output_type -> notary.v1.TestRegistryResponse
-	30, // 64: notary.v1.ImageService.ListImages:output_type -> notary.v1.ListImagesResponse
-	32, // 65: notary.v1.ImageService.GetImage:output_type -> notary.v1.GetImageResponse
-	38, // 66: notary.v1.RepositoryService.ListRepositories:output_type -> notary.v1.ListRepositoriesResponse
-	40, // 67: notary.v1.RepositoryService.GetRepository:output_type -> notary.v1.GetRepositoryResponse
-	42, // 68: notary.v1.RepositoryService.CreateRepository:output_type -> notary.v1.CreateRepositoryResponse
-	44, // 69: notary.v1.RepositoryService.UpdateRepository:output_type -> notary.v1.UpdateRepositoryResponse
-	46, // 70: notary.v1.RepositoryService.DeleteRepository:output_type -> notary.v1.DeleteRepositoryResponse
-	48, // 71: notary.v1.RepositoryService.PreviewRepository:output_type -> notary.v1.PreviewRepositoryResponse
-	53, // [53:72] is the sub-list for method output_type
-	34, // [34:53] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	2,  // 20: notary.v1.ImageRepository.kind:type_name -> notary.v1.RefKind
+	32, // 21: notary.v1.ListImageRepositoriesResponse.repositories:type_name -> notary.v1.ImageRepository
+	2,  // 22: notary.v1.Package.kind:type_name -> notary.v1.RefKind
+	34, // 23: notary.v1.Package.registries:type_name -> notary.v1.RegistryRef
+	60, // 24: notary.v1.Package.updated:type_name -> google.protobuf.Timestamp
+	2,  // 25: notary.v1.ListPackagesRequest.kind:type_name -> notary.v1.RefKind
+	35, // 26: notary.v1.ListPackagesResponse.packages:type_name -> notary.v1.Package
+	2,  // 27: notary.v1.GetPackageRequest.kind:type_name -> notary.v1.RefKind
+	35, // 28: notary.v1.GetPackageResponse.package:type_name -> notary.v1.Package
+	28, // 29: notary.v1.GetPackageResponse.variants:type_name -> notary.v1.Image
+	28, // 30: notary.v1.GetImageResponse.image:type_name -> notary.v1.Image
+	59, // 31: notary.v1.GetImageResponse.labels:type_name -> notary.v1.GetImageResponse.LabelsEntry
+	42, // 32: notary.v1.Repository.sources:type_name -> notary.v1.Source
+	43, // 33: notary.v1.Repository.urls:type_name -> notary.v1.RepositoryUrls
+	60, // 34: notary.v1.Repository.created_at:type_name -> google.protobuf.Timestamp
+	60, // 35: notary.v1.Repository.updated_at:type_name -> google.protobuf.Timestamp
+	42, // 36: notary.v1.RepositoryInput.sources:type_name -> notary.v1.Source
+	44, // 37: notary.v1.ListRepositoriesResponse.repositories:type_name -> notary.v1.Repository
+	44, // 38: notary.v1.GetRepositoryResponse.repository:type_name -> notary.v1.Repository
+	45, // 39: notary.v1.CreateRepositoryRequest.repository:type_name -> notary.v1.RepositoryInput
+	44, // 40: notary.v1.CreateRepositoryResponse.repository:type_name -> notary.v1.Repository
+	45, // 41: notary.v1.UpdateRepositoryRequest.repository:type_name -> notary.v1.RepositoryInput
+	44, // 42: notary.v1.UpdateRepositoryResponse.repository:type_name -> notary.v1.Repository
+	34, // 43: notary.v1.MissingRuntime.available_in:type_name -> notary.v1.RegistryRef
+	28, // 44: notary.v1.PreviewRepositoryResponse.images:type_name -> notary.v1.Image
+	57, // 45: notary.v1.PreviewRepositoryResponse.missing_runtimes:type_name -> notary.v1.MissingRuntime
+	3,  // 46: notary.v1.SystemService.GetInfo:input_type -> notary.v1.GetInfoRequest
+	5,  // 47: notary.v1.SystemService.GetMe:input_type -> notary.v1.GetMeRequest
+	8,  // 48: notary.v1.SystemService.GetOverview:input_type -> notary.v1.GetOverviewRequest
+	10, // 49: notary.v1.SystemService.Logout:input_type -> notary.v1.LogoutRequest
+	14, // 50: notary.v1.RegistryService.ListRegistries:input_type -> notary.v1.ListRegistriesRequest
+	16, // 51: notary.v1.RegistryService.GetRegistry:input_type -> notary.v1.GetRegistryRequest
+	18, // 52: notary.v1.RegistryService.CreateRegistry:input_type -> notary.v1.CreateRegistryRequest
+	20, // 53: notary.v1.RegistryService.UpdateRegistry:input_type -> notary.v1.UpdateRegistryRequest
+	22, // 54: notary.v1.RegistryService.DeleteRegistry:input_type -> notary.v1.DeleteRegistryRequest
+	24, // 55: notary.v1.RegistryService.SyncRegistry:input_type -> notary.v1.SyncRegistryRequest
+	26, // 56: notary.v1.RegistryService.TestRegistry:input_type -> notary.v1.TestRegistryRequest
+	29, // 57: notary.v1.ImageService.ListImages:input_type -> notary.v1.ListImagesRequest
+	40, // 58: notary.v1.ImageService.GetImage:input_type -> notary.v1.GetImageRequest
+	31, // 59: notary.v1.ImageService.ListImageRepositories:input_type -> notary.v1.ListImageRepositoriesRequest
+	36, // 60: notary.v1.ImageService.ListPackages:input_type -> notary.v1.ListPackagesRequest
+	38, // 61: notary.v1.ImageService.GetPackage:input_type -> notary.v1.GetPackageRequest
+	46, // 62: notary.v1.RepositoryService.ListRepositories:input_type -> notary.v1.ListRepositoriesRequest
+	48, // 63: notary.v1.RepositoryService.GetRepository:input_type -> notary.v1.GetRepositoryRequest
+	50, // 64: notary.v1.RepositoryService.CreateRepository:input_type -> notary.v1.CreateRepositoryRequest
+	52, // 65: notary.v1.RepositoryService.UpdateRepository:input_type -> notary.v1.UpdateRepositoryRequest
+	54, // 66: notary.v1.RepositoryService.DeleteRepository:input_type -> notary.v1.DeleteRepositoryRequest
+	56, // 67: notary.v1.RepositoryService.PreviewRepository:input_type -> notary.v1.PreviewRepositoryRequest
+	4,  // 68: notary.v1.SystemService.GetInfo:output_type -> notary.v1.GetInfoResponse
+	7,  // 69: notary.v1.SystemService.GetMe:output_type -> notary.v1.GetMeResponse
+	9,  // 70: notary.v1.SystemService.GetOverview:output_type -> notary.v1.GetOverviewResponse
+	11, // 71: notary.v1.SystemService.Logout:output_type -> notary.v1.LogoutResponse
+	15, // 72: notary.v1.RegistryService.ListRegistries:output_type -> notary.v1.ListRegistriesResponse
+	17, // 73: notary.v1.RegistryService.GetRegistry:output_type -> notary.v1.GetRegistryResponse
+	19, // 74: notary.v1.RegistryService.CreateRegistry:output_type -> notary.v1.CreateRegistryResponse
+	21, // 75: notary.v1.RegistryService.UpdateRegistry:output_type -> notary.v1.UpdateRegistryResponse
+	23, // 76: notary.v1.RegistryService.DeleteRegistry:output_type -> notary.v1.DeleteRegistryResponse
+	25, // 77: notary.v1.RegistryService.SyncRegistry:output_type -> notary.v1.SyncRegistryResponse
+	27, // 78: notary.v1.RegistryService.TestRegistry:output_type -> notary.v1.TestRegistryResponse
+	30, // 79: notary.v1.ImageService.ListImages:output_type -> notary.v1.ListImagesResponse
+	41, // 80: notary.v1.ImageService.GetImage:output_type -> notary.v1.GetImageResponse
+	33, // 81: notary.v1.ImageService.ListImageRepositories:output_type -> notary.v1.ListImageRepositoriesResponse
+	37, // 82: notary.v1.ImageService.ListPackages:output_type -> notary.v1.ListPackagesResponse
+	39, // 83: notary.v1.ImageService.GetPackage:output_type -> notary.v1.GetPackageResponse
+	47, // 84: notary.v1.RepositoryService.ListRepositories:output_type -> notary.v1.ListRepositoriesResponse
+	49, // 85: notary.v1.RepositoryService.GetRepository:output_type -> notary.v1.GetRepositoryResponse
+	51, // 86: notary.v1.RepositoryService.CreateRepository:output_type -> notary.v1.CreateRepositoryResponse
+	53, // 87: notary.v1.RepositoryService.UpdateRepository:output_type -> notary.v1.UpdateRepositoryResponse
+	55, // 88: notary.v1.RepositoryService.DeleteRepository:output_type -> notary.v1.DeleteRepositoryResponse
+	58, // 89: notary.v1.RepositoryService.PreviewRepository:output_type -> notary.v1.PreviewRepositoryResponse
+	68, // [68:90] is the sub-list for method output_type
+	46, // [46:68] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_notary_v1_notary_proto_init() }
@@ -3342,7 +4351,7 @@ func file_notary_v1_notary_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notary_v1_notary_proto_rawDesc), len(file_notary_v1_notary_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   47,
+			NumMessages:   57,
 			NumExtensions: 0,
 			NumServices:   4,
 		},

@@ -1,19 +1,31 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import * as Table from '$lib/components/ui/table';
+	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { Badge } from '$lib/components/ui/badge';
 	import type { Image } from '$lib/api';
 	import { formatBytes, imageTitle } from '$lib/format';
+	import { imageHref } from '$lib/links';
+	import { rowClick } from '$lib/row-link';
 	import PackageIcon from './package-icon.svelte';
 	import KindBadge from './kind-badge.svelte';
+	import ExtraDataBadge from './metadata/extra-data-badge.svelte';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
 	let {
 		images,
-		showRegistry = true
+		showRegistry = true,
+		missingRuntimes
 	}: {
 		images: Image[];
 		/** Show the registry column (hide when all images come from one registry). */
 		showRegistry?: boolean;
+		/**
+		 * Runtime refs clients can't get, each with the flatpak IDs that need it to install
+		 * (MissingRuntime.neededBy); rows of those images get a warning. An image whose runtime is
+		 * informational (an SDK, an extension without extra data) is not flagged.
+		 */
+		missingRuntimes?: ReadonlyMap<string, ReadonlySet<string>>;
 	} = $props();
 
 	const MAX_TAGS = 3;
@@ -35,16 +47,35 @@
 	</Table.Header>
 	<Table.Body>
 		{#each images as image (image.id)}
-			<Table.Row class="cursor-pointer" onclick={() => goto(`/packages/${image.id}`)}>
+			{@const href = imageHref(image)}
+			{@const runtimeMissing = !!image.runtime && !!missingRuntimes?.get(image.runtime)?.has(image.flatpakId)}
+			<Table.Row class="cursor-pointer" onclick={rowClick(() => goto(href))}>
 				<Table.Cell class="max-w-56 sm:max-w-80">
 					<div class="flex items-center gap-3">
 						<PackageIcon {image} />
 						<div class="flex min-w-0 flex-col">
-							<a
-								href="/packages/{image.id}"
-								class="truncate font-medium hover:underline"
-								onclick={(e) => e.stopPropagation()}>{imageTitle(image)}</a
-							>
+							<div class="flex min-w-0 items-center gap-1.5">
+								<a {href} class="truncate font-medium hover:underline">{imageTitle(image)}</a>
+								{#if runtimeMissing}
+									<Tooltip.Root>
+										<Tooltip.Trigger>
+											{#snippet child({ props })}
+												<span
+													{...props}
+													class="inline-flex shrink-0 text-amber-600 dark:text-amber-500"
+													aria-label="Runtime not served"
+												>
+													<TriangleAlertIcon class="size-3.5" />
+												</span>
+											{/snippet}
+										</Tooltip.Trigger>
+										<Tooltip.Content class="max-w-xs">
+											Needs <span class="font-mono">{image.runtime}</span>, which this repository doesn't serve.
+										</Tooltip.Content>
+									</Tooltip.Root>
+								{/if}
+								<ExtraDataBadge hasExtraData={image.hasExtraData} />
+							</div>
 							<span class="truncate text-xs text-muted-foreground" title={image.ref}>
 								{image.summary || image.ref}
 							</span>

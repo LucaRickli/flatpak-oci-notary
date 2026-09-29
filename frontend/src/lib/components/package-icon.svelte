@@ -6,14 +6,25 @@
 
 	let {
 		image,
+		iconId,
+		alt,
 		class: className
-	}: { image: Pick<Image, 'id' | 'hasIcon' | 'name' | 'flatpakId' | 'repository'>; class?: string } =
-		$props();
+	}: {
+		/** Shows this image's icon (when it has one). */
+		image?: Pick<Image, 'id' | 'hasIcon' | 'name' | 'flatpakId' | 'repository'>;
+		/** Or: the id of an image with an icon (e.g. Package.iconImageId); empty = none. */
+		iconId?: string;
+		alt?: string;
+		class?: string;
+	} = $props();
+
+	const src = $derived(iconId ?? (image?.hasIcon ? image.id : ''));
+	const label = $derived(alt ?? (image ? imageTitle(image) : ''));
 
 	let failed = $state(false);
 	$effect(() => {
-		// Retry when a different image is shown in the same slot.
-		void image.id;
+		// Retry when a different icon is shown in the same slot.
+		void src;
 		failed = false;
 	});
 </script>
@@ -24,10 +35,10 @@
 		className
 	)}
 >
-	{#if image.hasIcon && !failed}
+	{#if src && !failed}
 		<img
-			src={urls.icon(image.id)}
-			alt={imageTitle(image)}
+			src={urls.icon(src)}
+			alt={label}
 			class="size-full object-contain"
 			loading="lazy"
 			onerror={() => (failed = true)}

@@ -37,5 +37,8 @@ ENV NOTARY_DATA_DIR=/data \
     NOTARY_LISTEN=:8080
 VOLUME /data
 EXPOSE 8080
+# The default command runs the server; override it to run the standalone
+# syncer against the same database, e.g. `docker run ... sync --due` or a
+# Kubernetes CronJob with args: ["sync", "--due"] (see the README).
 ENTRYPOINT ["/notary"]
 CMD ["serve"]

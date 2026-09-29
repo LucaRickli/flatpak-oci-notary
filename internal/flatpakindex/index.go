@@ -166,7 +166,7 @@ func Select(sources []store.Source, f Filter, images []*store.Image) []*store.Im
 		if !MatchSources(sources, img) || !f.matches(img) {
 			continue
 		}
-		if cur, ok := best[img.Ref]; !ok || newer(img, cur) {
+		if cur, ok := best[img.Ref]; !ok || store.Newer(img, cur) {
 			best[img.Ref] = img
 		}
 	}
@@ -180,22 +180,72 @@ func Select(sources []store.Source, f Filter, images []*store.Image) []*store.Im
 	return out
 }
 
-func newer(a, b *store.Image) bool {
-	at, bt := createdOrZero(a), createdOrZero(b)
-	if at != bt {
-		return at > bt
-	}
-	if !a.IndexedAt.Equal(b.IndexedAt) {
-		return a.IndexedAt.After(b.IndexedAt)
-	}
-	return a.ID > b.ID
+// MissingRuntime is a runtime that served images need but the selection
+// does not serve itself: clients need another remote providing it, or the
+// install fails.
+type MissingRuntime struct {
+	// Runtime is the runtime ref without kind, e.g. "org.example.Platform/x86_64/24.08".
+	Runtime string
+	// NeededBy are the distinct flatpak IDs of the images needing it, sorted.
+	NeededBy []string
 }
 
-func createdOrZero(i *store.Image) int64 {
-	if i.Created == nil {
-		return 0
+// NeedsRuntime reports whether installing the image needs its runtime
+// (Image.Runtime) installed, following flatpak (op_get_runtime_ref in
+// common/flatpak-transaction.c, apply_extra_data in common/flatpak-dir.c):
+// an app always needs its runtime; a runtime or extension only when it has
+// extra data, whose apply_extra script runs inside the runtime. The runtime=
+// of SDKs, SDK extensions, locales, plugins and other extensions is
+// informational: flatpak installs them without it.
+//
+// Extra data declaring NoRuntime=true does not need the runtime either; the
+// store does not keep that flag, so such (rare) images are still counted.
+func NeedsRuntime(img *store.Image) bool {
+	if img.Runtime == "" {
+		return false
 	}
-	return i.Created.UnixNano()
+	switch img.Kind {
+	case store.KindApp:
+		return true
+	case store.KindRuntime:
+		return img.HasExtraData
+	}
+	return false
+}
+
+// MissingRuntimes reports the runtimes the selected images need to be
+// installed (see NeedsRuntime) whose ref is not among the selected images,
+// ordered by runtime ref. It is computed over the whole selection, which
+// already reflects the request filters (architecture, tag): a selection
+// limited to one architecture only reports that architecture's runtimes.
+func MissingRuntimes(selected []*store.Image) []MissingRuntime {
+	served := make(map[string]bool, len(selected))
+	for _, img := range selected {
+		served[img.Ref] = true
+	}
+	needed := map[string]map[string]bool{}
+	for _, img := range selected {
+		if !NeedsRuntime(img) || served[img.RuntimeRef()] {
+			continue
+		}
+		ids := needed[img.Runtime]
+		if ids == nil {
+			ids = map[string]bool{}
+			needed[img.Runtime] = ids
+		}
+		ids[img.FlatpakID] = true
+	}
+	out := make([]MissingRuntime, 0, len(needed))
+	for rt, ids := range needed {
+		m := MissingRuntime{Runtime: rt, NeededBy: make([]string, 0, len(ids))}
+		for id := range ids {
+			m.NeededBy = append(m.NeededBy, id)
+		}
+		slices.Sort(m.NeededBy)
+		out = append(out, m)
+	}
+	slices.SortFunc(out, func(a, b MissingRuntime) int { return cmp.Compare(a.Runtime, b.Runtime) })
+	return out
 }
 
 // Build assembles the index document for the selected images.

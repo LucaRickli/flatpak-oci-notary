@@ -3,15 +3,28 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { SyncState, type Registry } from '$lib/api';
+	import { isQueued, syncAction } from '$lib/sync';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import ClockIcon from '@lucide/svelte/icons/clock';
+	import HourglassIcon from '@lucide/svelte/icons/hourglass';
 
-	let { registry }: { registry: Pick<Registry, 'syncState' | 'lastSyncError'> } = $props();
+	let {
+		registry
+	}: { registry: Pick<Registry, 'syncState' | 'syncRequested' | 'lastSyncError'> } = $props();
 </script>
 
 {#if registry.syncState === SyncState.SYNCING}
 	<Badge variant="secondary"><Spinner data-icon="inline-start" />Syncing</Badge>
+{:else if isQueued(registry)}
+	<Tooltip.Root>
+		<Tooltip.Trigger>
+			{#snippet child({ props })}
+				<Badge variant="secondary" {...props}><HourglassIcon data-icon="inline-start" />Sync queued</Badge>
+			{/snippet}
+		</Tooltip.Trigger>
+		<Tooltip.Content class="max-w-xs">{syncAction(registry).hint}</Tooltip.Content>
+	</Tooltip.Root>
 {:else if registry.syncState === SyncState.OK}
 	<Badge variant="outline"><CircleCheckIcon data-icon="inline-start" />Synced</Badge>
 {:else if registry.syncState === SyncState.ERROR}

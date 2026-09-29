@@ -10,17 +10,20 @@
 	import { crumb } from '$lib/breadcrumb.svelte';
 	import ShieldOffIcon from '@lucide/svelte/icons/shield-off';
 
-	const sections: Record<string, string> = {
-		registries: 'Registries',
-		packages: 'Packages',
-		repositories: 'Repositories'
+	const sections: Record<string, { label: string; href: string }> = {
+		registries: { label: 'Registries', href: '/registries' },
+		packages: { label: 'Packages', href: '/packages' },
+		// /images/<id> resolves to a package page.
+		images: { label: 'Packages', href: '/packages' },
+		repositories: { label: 'Repositories', href: '/repositories' }
 	};
 
 	const crumbs = $derived.by(() => {
 		const [section, sub] = page.url.pathname.split('/').filter(Boolean);
 		const items: { label: string; href?: string }[] = [];
 		if (!section) return [{ label: 'Dashboard' }];
-		items.push({ label: sections[section] ?? section, href: sub ? `/${section}` : undefined });
+		const s = sections[section] ?? { label: section, href: `/${section}` };
+		items.push({ label: s.label, href: sub ? s.href : undefined });
 		if (sub) {
 			const label = sub === 'new' ? 'New' : crumb.path === page.url.pathname ? crumb.label : '…';
 			items.push({ label });

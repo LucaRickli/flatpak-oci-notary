@@ -1,5 +1,4 @@
-// Package cli implements the notary command line (cobra + viper).
-package cli
+package main
 
 import (
 	"errors"
@@ -10,28 +9,24 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/lucarickli/flatpak-oci-notary/internal/version"
 )
-
-// Execute runs the root command.
-func Execute() error {
-	err := newRootCmd().Execute()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-	}
-	return err
-}
 
 func newRootCmd() *cobra.Command {
 	v := viper.New()
 	var cfgFile string
 
 	root := &cobra.Command{
-		Use:           "notary",
-		Short:         "Serve Flatpak OCI remote indexes for images on OCI registries",
+		Use:   "notary",
+		Short: "Serve Flatpak OCI remote indexes for images on OCI registries",
+		Long: `Flatpak OCI Notary indexes flatpak images on OCI registries and serves
+flatpak remote indexes for them.
+
+"notary serve" runs the server, by default with the sync scheduler embedded.
+"notary sync" syncs registries from a separate process against the same
+database, for deployments where the server runs with sync.enabled=false.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
@@ -44,7 +39,7 @@ func newRootCmd() *cobra.Command {
 	mustBind(v, "log.level", root.PersistentFlags().Lookup("log-level"))
 	mustBind(v, "log.format", root.PersistentFlags().Lookup("log-format"))
 
-	root.AddCommand(newServeCmd(v), newVersionCmd())
+	root.AddCommand(newServeCmd(v), newSyncCmd(v), newVersionCmd())
 	return root
 }
 
@@ -96,10 +91,4 @@ func newLogger(v *viper.Viper) (zerolog.Logger, error) {
 	log = log.Level(level).With().Timestamp().Logger()
 	zerolog.DefaultContextLogger = &log
 	return log, nil
-}
-
-func mustBind(v *viper.Viper, key string, flag *pflag.Flag) {
-	if err := v.BindPFlag(key, flag); err != nil {
-		panic(err)
-	}
 }

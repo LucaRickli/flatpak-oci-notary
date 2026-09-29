@@ -18,16 +18,23 @@ export class Resource<T> {
 	constructor(fetcher: () => Promise<T>) {
 		this.#fetcher = fetcher;
 		$effect(() => {
-			this.#run();
+			this.#run(false);
 		});
 	}
 
-	/** Reloads the data (e.g. after a mutation or while polling). */
-	refresh = (): Promise<void> => untrack(() => this.#run());
+	/** Reloads the data (e.g. after a mutation). */
+	refresh = (): Promise<void> => untrack(() => this.#run(false));
 
-	async #run() {
+	/**
+	 * Reloads in the background (periodic refresh): `loading` stays unchanged, and
+	 * a failure keeps the data already shown instead of replacing it with the error.
+	 * Superseded by any newer load, like `refresh`.
+	 */
+	poll = (): Promise<void> => untrack(() => this.#run(true));
+
+	async #run(quiet: boolean) {
 		const seq = ++this.#seq;
-		this.loading = true;
+		if (!quiet) this.loading = true;
 		try {
 			const value = await this.#fetcher();
 			if (seq === this.#seq) {
@@ -35,7 +42,7 @@ export class Resource<T> {
 				this.error = undefined;
 			}
 		} catch (err) {
-			if (seq === this.#seq) this.error = err;
+			if (seq === this.#seq && !(quiet && this.current !== undefined)) this.error = err;
 		} finally {
 			if (seq === this.#seq) this.loading = false;
 		}

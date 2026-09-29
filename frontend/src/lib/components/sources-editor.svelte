@@ -20,8 +20,8 @@
 		registryId
 	}: {
 		sources: SourceDraft[];
-		/** Registry the repository is bound to (0 = none chosen yet). */
-		registryId: number;
+		/** Registry the repository is bound to (empty = none chosen yet). */
+		registryId: string;
 	} = $props();
 
 	let pickerOpen = $state(false);

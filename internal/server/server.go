@@ -31,7 +31,8 @@ type Options struct {
 	Authenticator *auth.Authenticator
 }
 
-// New returns the root handler.
+// New returns the root handler. x is nil when syncs run in a separate
+// process (the API then only records sync requests).
 func New(s *store.Store, x *indexer.Indexer, log zerolog.Logger, opts Options) http.Handler {
 	baseURL := func(r *http.Request) string { return requestBaseURL(r, opts.PublicURL, opts.TrustProxy) }
 
@@ -140,6 +141,26 @@ func init() {
 	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
 }
 
+// rootAssetExts are the extensions of the static files at the root of the
+// built UI (favicons, manifest, robots.txt). A missing single-segment path
+// with one of them is a real 404, not a UI route.
+var rootAssetExts = map[string]bool{
+	".js": true, ".css": true, ".map": true, ".png": true, ".ico": true, ".svg": true,
+	".webmanifest": true, ".json": true, ".txt": true, ".woff2": true,
+}
+
+// isAssetPath reports whether a path that does not exist in the UI is a
+// missing asset (404) rather than a client-side route. Routes can end in
+// what looks like a file extension (package pages end in a flatpak id such
+// as org.gnome.Calculator), so only the generated asset directory and known
+// root file types count as assets.
+func isAssetPath(p string) bool {
+	if strings.HasPrefix(p, "_app/") {
+		return true
+	}
+	return !strings.Contains(p, "/") && rootAssetExts[strings.ToLower(path.Ext(p))]
+}
+
 // spa serves the built UI, falling back to index.html for client-side routes.
 func spa(ui fs.FS) http.Handler {
 	files := http.FileServerFS(ui)
@@ -162,7 +183,7 @@ func spa(ui fs.FS) http.Handler {
 			return
 		}
 		// Unknown asset paths are real 404s; everything else is a UI route.
-		if path.Ext(p) != "" && p != "index.html" {
+		if isAssetPath(p) {
 			http.NotFound(w, r)
 			return
 		}

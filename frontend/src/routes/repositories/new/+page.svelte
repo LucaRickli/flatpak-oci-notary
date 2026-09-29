@@ -15,17 +15,19 @@
 	import { Resource } from '$lib/resource.svelte';
 	import { reportError } from '$lib/session.svelte';
 	import { SLUG_PATTERN } from '$lib/format';
+	import { canonicalId } from '$lib/ids';
 	import { includeEverything, type SourceDraft } from '$lib/sources';
 	import ServerIcon from '@lucide/svelte/icons/server';
 
 	const registries = new Resource(async () => (await registryClient.listRegistries({})).registries);
 
+	const registryParam = page.url.searchParams.get('registry');
 	let meta = $state<RepositoryMeta>({
 		slug: '',
 		title: '',
 		description: '',
 		homepage: '',
-		registryId: Number(page.url.searchParams.get('registry')) || 0
+		registryId: canonicalId(registryParam) ?? ''
 	});
 	let sources = $state<SourceDraft[]>([includeEverything()]);
 	let saving = $state(false);
@@ -36,7 +38,7 @@
 		if (list?.length === 1 && !meta.registryId) meta.registryId = list[0].id;
 	});
 
-	const valid = $derived(meta.title.trim() !== '' && SLUG_PATTERN.test(meta.slug) && meta.registryId > 0);
+	const valid = $derived(meta.title.trim() !== '' && SLUG_PATTERN.test(meta.slug) && meta.registryId !== '');
 
 	async function create(event: SubmitEvent) {
 		event.preventDefault();

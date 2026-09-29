@@ -49,7 +49,7 @@
 
 	// Editable drafts, reset whenever a (new or saved) repository arrives.
 	let sources = $state<SourceDraft[]>([]);
-	let meta = $state<RepositoryMeta>({ slug: '', title: '', description: '', homepage: '', registryId: 0 });
+	let meta = $state<RepositoryMeta>({ slug: '', title: '', description: '', homepage: '', registryId: '' });
 
 	function metaOf(r: Repository): RepositoryMeta {
 		return {
@@ -76,7 +76,7 @@
 
 	const rulesDirty = $derived(!!repository && !sameSources(sources, repository.sources.map(toDraft)));
 	const metaDirty = $derived(!!repository && JSON.stringify(meta) !== JSON.stringify(metaOf(repository)));
-	const metaValid = $derived(meta.title.trim() !== '' && SLUG_PATTERN.test(meta.slug) && meta.registryId > 0);
+	const metaValid = $derived(meta.title.trim() !== '' && SLUG_PATTERN.test(meta.slug) && meta.registryId !== '');
 
 	async function save(patch: Partial<RepositoryMeta> & { sources?: SourceDraft[] }): Promise<boolean> {
 		const r = repository;
@@ -224,7 +224,7 @@
 						<Alert.Description>The preview shows the saved rules. Save the rules to preview your changes.</Alert.Description>
 					</Alert.Root>
 				{/if}
-				<RepositoryPreview repositoryId={repository.id} {revision} />
+				<RepositoryPreview repositoryId={repository.id} registryName={repository.registryName} {revision} />
 			{/if}
 		</Tabs.Content>
 

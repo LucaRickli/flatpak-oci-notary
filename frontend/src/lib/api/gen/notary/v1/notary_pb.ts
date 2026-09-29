@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file notary/v1/notary.proto.
  */
 export const file_notary_v1_notary: GenFile = /*@__PURE__*/
-  fileDesc("ChZub3RhcnkvdjEvbm90YXJ5LnByb3RvEglub3RhcnkudjEiEAoOR2V0SW5mb1JlcXVlc3QiTAoPR2V0SW5mb1Jlc3BvbnNlEg8KB3ZlcnNpb24YASABKAkSEgoKcHVibGljX3VybBgCIAEoCRIUCgxhdXRoX2VuYWJsZWQYAyABKAgiDgoMR2V0TWVSZXF1ZXN0IjQKBFVzZXISDwoHc3ViamVjdBgBIAEoCRINCgVlbWFpbBgCIAEoCRIMCgRuYW1lGAMgASgJIlsKDUdldE1lUmVzcG9uc2USFQoNYXV0aGVudGljYXRlZBgBIAEoCBIUCgxhdXRoX2VuYWJsZWQYAiABKAgSHQoEdXNlchgDIAEoCzIPLm5vdGFyeS52MS5Vc2VyIhQKEkdldE92ZXJ2aWV3UmVxdWVzdCJvChNHZXRPdmVydmlld1Jlc3BvbnNlEhIKCnJlZ2lzdHJpZXMYASABKAUSFAoMcmVwb3NpdG9yaWVzGAIgASgFEg4KBmltYWdlcxgDIAEoBRIMCgRhcHBzGAQgASgFEhAKCHJ1bnRpbWVzGAUgASgFIg8KDUxvZ291dFJlcXVlc3QiEAoOTG9nb3V0UmVzcG9uc2UiswQKCFJlZ2lzdHJ5EgoKAmlkGAEgASgFEgwKBG5hbWUYAiABKAkSCwoDdXJsGAMgASgJEhAKCGluc2VjdXJlGAQgASgIEiYKCWF1dGhfdHlwZRgFIAEoDjITLm5vdGFyeS52MS5BdXRoVHlwZRIQCgh1c2VybmFtZRgGIAEoCRIUCgxoYXNfcGFzc3dvcmQYByABKAgSEwoLdXNlX2NhdGFsb2cYCCABKAgSFAoMcmVwb3NpdG9yaWVzGAkgAygJEhsKE3JlcG9zaXRvcnlfcGF0dGVybnMYCiADKAkSFAoMdGFnX3BhdHRlcm5zGAsgAygJEh0KFXN5bmNfaW50ZXJ2YWxfbWludXRlcxgMIAEoBRIoCgpzeW5jX3N0YXRlGA0gASgOMhQubm90YXJ5LnYxLlN5bmNTdGF0ZRIwCgxsYXN0X3N5bmNfYXQYDiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhcKD2xhc3Rfc3luY19lcnJvchgPIAEoCRIdChVsYXN0X3N5bmNfZHVyYXRpb25fbXMYECABKAMSEwoLaW1hZ2VfY291bnQYESABKAUSGAoQcmVwb3NpdG9yeV9jb3VudBgSIAEoBRIuCgpjcmVhdGVkX2F0GBMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKXAgoNUmVnaXN0cnlJbnB1dBIMCgRuYW1lGAEgASgJEgsKA3VybBgCIAEoCRIQCghpbnNlY3VyZRgDIAEoCBImCglhdXRoX3R5cGUYBCABKA4yEy5ub3RhcnkudjEuQXV0aFR5cGUSEAoIdXNlcm5hbWUYBSABKAkSFQoIcGFzc3dvcmQYBiABKAlIAIgBARITCgt1c2VfY2F0YWxvZxgHIAEoCBIUCgxyZXBvc2l0b3JpZXMYCCADKAkSGwoTcmVwb3NpdG9yeV9wYXR0ZXJucxgJIAMoCRIUCgx0YWdfcGF0dGVybnMYCiADKAkSHQoVc3luY19pbnRlcnZhbF9taW51dGVzGAsgASgFQgsKCV9wYXNzd29yZCIXChVMaXN0UmVnaXN0cmllc1JlcXVlc3QiQQoWTGlzdFJlZ2lzdHJpZXNSZXNwb25zZRInCgpyZWdpc3RyaWVzGAEgAygLMhMubm90YXJ5LnYxLlJlZ2lzdHJ5IiAKEkdldFJlZ2lzdHJ5UmVxdWVzdBIKCgJpZBgBIAEoBSI8ChNHZXRSZWdpc3RyeVJlc3BvbnNlEiUKCHJlZ2lzdHJ5GAEgASgLMhMubm90YXJ5LnYxLlJlZ2lzdHJ5IkMKFUNyZWF0ZVJlZ2lzdHJ5UmVxdWVzdBIqCghyZWdpc3RyeRgBIAEoCzIYLm5vdGFyeS52MS5SZWdpc3RyeUlucHV0Ij8KFkNyZWF0ZVJlZ2lzdHJ5UmVzcG9uc2USJQoIcmVnaXN0cnkYASABKAsyEy5ub3RhcnkudjEuUmVnaXN0cnkiTwoVVXBkYXRlUmVnaXN0cnlSZXF1ZXN0EgoKAmlkGAEgASgFEioKCHJlZ2lzdHJ5GAIgASgLMhgubm90YXJ5LnYxLlJlZ2lzdHJ5SW5wdXQiPwoWVXBkYXRlUmVnaXN0cnlSZXNwb25zZRIlCghyZWdpc3RyeRgBIAEoCzITLm5vdGFyeS52MS5SZWdpc3RyeSIjChVEZWxldGVSZWdpc3RyeVJlcXVlc3QSCgoCaWQYASABKAUiGAoWRGVsZXRlUmVnaXN0cnlSZXNwb25zZSIhChNTeW5jUmVnaXN0cnlSZXF1ZXN0EgoKAmlkGAEgASgFIj0KFFN5bmNSZWdpc3RyeVJlc3BvbnNlEiUKCHJlZ2lzdHJ5GAEgASgLMhMubm90YXJ5LnYxLlJlZ2lzdHJ5IlkKE1Rlc3RSZWdpc3RyeVJlcXVlc3QSKgoIcmVnaXN0cnkYASABKAsyGC5ub3RhcnkudjEuUmVnaXN0cnlJbnB1dBIPCgJpZBgCIAEoBUgAiAEBQgUKA19pZCJpChRUZXN0UmVnaXN0cnlSZXNwb25zZRIKCgJvaxgBIAEoCBINCgVlcnJvchgCIAEoCRIZChFjYXRhbG9nX3N1cHBvcnRlZBgDIAEoCBIbChNzYW1wbGVfcmVwb3NpdG9yaWVzGAQgAygJItYDCgVJbWFnZRIKCgJpZBgBIAEoBRITCgtyZWdpc3RyeV9pZBgCIAEoBRIVCg1yZWdpc3RyeV9uYW1lGAMgASgJEhIKCnJlcG9zaXRvcnkYBCABKAkSDgoGZGlnZXN0GAUgASgJEhIKCm1lZGlhX3R5cGUYBiABKAkSCgoCb3MYByABKAkSFAoMYXJjaGl0ZWN0dXJlGAggASgJEgwKBHRhZ3MYCSADKAkSCwoDcmVmGAogASgJEiAKBGtpbmQYCyABKA4yEi5ub3RhcnkudjEuUmVmS2luZBISCgpmbGF0cGFrX2lkGAwgASgJEgwKBGFyY2gYDSABKAkSDgoGYnJhbmNoGA4gASgJEgwKBG5hbWUYDyABKAkSDwoHc3VtbWFyeRgQIAEoCRIPCgd2ZXJzaW9uGBEgASgJEhYKDmluc3RhbGxlZF9zaXplGBIgASgDEhUKDWRvd25sb2FkX3NpemUYEyABKAMSKwoHY3JlYXRlZBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIaGFzX2ljb24YFSABKAgSLgoKaW5kZXhlZF9hdBgWIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiWQoRTGlzdEltYWdlc1JlcXVlc3QSEwoLcmVnaXN0cnlfaWQYASABKAUSDQoFcXVlcnkYAiABKAkSIAoEa2luZBgDIAEoDjISLm5vdGFyeS52MS5SZWZLaW5kIjYKEkxpc3RJbWFnZXNSZXNwb25zZRIgCgZpbWFnZXMYASADKAsyEC5ub3RhcnkudjEuSW1hZ2UiHQoPR2V0SW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgFIq0BChBHZXRJbWFnZVJlc3BvbnNlEh8KBWltYWdlGAEgASgLMhAubm90YXJ5LnYxLkltYWdlEjcKBmxhYmVscxgCIAMoCzInLm5vdGFyeS52MS5HZXRJbWFnZVJlc3BvbnNlLkxhYmVsc0VudHJ5EhAKCG1ldGFkYXRhGAMgASgJGi0KC0xhYmVsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiXwoGU291cmNlEhoKEnJlcG9zaXRvcnlfcGF0dGVybhgBIAEoCRITCgtyZWZfcGF0dGVybhgCIAEoCRITCgt0YWdfcGF0dGVybhgDIAEoCRIPCgdleGNsdWRlGAQgASgIIkQKDlJlcG9zaXRvcnlVcmxzEg4KBnJlbW90ZRgBIAEoCRITCgtmbGF0cGFrcmVwbxgCIAEoCRINCgVpbmRleBgDIAEoCSLKAgoKUmVwb3NpdG9yeRIKCgJpZBgBIAEoBRIMCgRzbHVnGAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCGhvbWVwYWdlGAUgASgJEhMKC3JlZ2lzdHJ5X2lkGAYgASgFEhUKDXJlZ2lzdHJ5X25hbWUYByABKAkSIgoHc291cmNlcxgIIAMoCzIRLm5vdGFyeS52MS5Tb3VyY2USEwoLaW1hZ2VfY291bnQYCSABKAUSJwoEdXJscxgKIAEoCzIZLm5vdGFyeS52MS5SZXBvc2l0b3J5VXJscxIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKOAQoPUmVwb3NpdG9yeUlucHV0EgwKBHNsdWcYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEAoIaG9tZXBhZ2UYBCABKAkSEwoLcmVnaXN0cnlfaWQYBSABKAUSIgoHc291cmNlcxgGIAMoCzIRLm5vdGFyeS52MS5Tb3VyY2UiGQoXTGlzdFJlcG9zaXRvcmllc1JlcXVlc3QiRwoYTGlzdFJlcG9zaXRvcmllc1Jlc3BvbnNlEisKDHJlcG9zaXRvcmllcxgBIAMoCzIVLm5vdGFyeS52MS5SZXBvc2l0b3J5IiIKFEdldFJlcG9zaXRvcnlSZXF1ZXN0EgoKAmlkGAEgASgFIkIKFUdldFJlcG9zaXRvcnlSZXNwb25zZRIpCgpyZXBvc2l0b3J5GAEgASgLMhUubm90YXJ5LnYxLlJlcG9zaXRvcnkiSQoXQ3JlYXRlUmVwb3NpdG9yeVJlcXVlc3QSLgoKcmVwb3NpdG9yeRgBIAEoCzIaLm5vdGFyeS52MS5SZXBvc2l0b3J5SW5wdXQiRQoYQ3JlYXRlUmVwb3NpdG9yeVJlc3BvbnNlEikKCnJlcG9zaXRvcnkYASABKAsyFS5ub3RhcnkudjEuUmVwb3NpdG9yeSJVChdVcGRhdGVSZXBvc2l0b3J5UmVxdWVzdBIKCgJpZBgBIAEoBRIuCgpyZXBvc2l0b3J5GAIgASgLMhoubm90YXJ5LnYxLlJlcG9zaXRvcnlJbnB1dCJFChhVcGRhdGVSZXBvc2l0b3J5UmVzcG9uc2USKQoKcmVwb3NpdG9yeRgBIAEoCzIVLm5vdGFyeS52MS5SZXBvc2l0b3J5IiUKF0RlbGV0ZVJlcG9zaXRvcnlSZXF1ZXN0EgoKAmlkGAEgASgFIhoKGERlbGV0ZVJlcG9zaXRvcnlSZXNwb25zZSJJChhQcmV2aWV3UmVwb3NpdG9yeVJlcXVlc3QSCgoCaWQYASABKAUSFAoMYXJjaGl0ZWN0dXJlGAIgASgJEgsKA3RhZxgDIAEoCSI9ChlQcmV2aWV3UmVwb3NpdG9yeVJlc3BvbnNlEiAKBmltYWdlcxgBIAMoCzIQLm5vdGFyeS52MS5JbWFnZSpTCghBdXRoVHlwZRIZChVBVVRIX1RZUEVfVU5TUEVDSUZJRUQQABIXChNBVVRIX1RZUEVfQU5PTllNT1VTEAESEwoPQVVUSF9UWVBFX0JBU0lDEAIqfgoJU3luY1N0YXRlEhoKFlNZTkNfU1RBVEVfVU5TUEVDSUZJRUQQABIUChBTWU5DX1NUQVRFX05FVkVSEAESFgoSU1lOQ19TVEFURV9TWU5DSU5HEAISEQoNU1lOQ19TVEFURV9PSxADEhQKEFNZTkNfU1RBVEVfRVJST1IQBCpLCgdSZWZLaW5kEhgKFFJFRl9LSU5EX1VOU1BFQ0lGSUVEEAASEAoMUkVGX0tJTkRfQVBQEAESFAoQUkVGX0tJTkRfUlVOVElNRRACMpoCCg1TeXN0ZW1TZXJ2aWNlEkAKB0dldEluZm8SGS5ub3RhcnkudjEuR2V0SW5mb1JlcXVlc3QaGi5ub3RhcnkudjEuR2V0SW5mb1Jlc3BvbnNlEjoKBUdldE1lEhcubm90YXJ5LnYxLkdldE1lUmVxdWVzdBoYLm5vdGFyeS52MS5HZXRNZVJlc3BvbnNlEkwKC0dldE92ZXJ2aWV3Eh0ubm90YXJ5LnYxLkdldE92ZXJ2aWV3UmVxdWVzdBoeLm5vdGFyeS52MS5HZXRPdmVydmlld1Jlc3BvbnNlEj0KBkxvZ291dBIYLm5vdGFyeS52MS5Mb2dvdXRSZXF1ZXN0Ghkubm90YXJ5LnYxLkxvZ291dFJlc3BvbnNlMt0ECg9SZWdpc3RyeVNlcnZpY2USVQoOTGlzdFJlZ2lzdHJpZXMSIC5ub3RhcnkudjEuTGlzdFJlZ2lzdHJpZXNSZXF1ZXN0GiEubm90YXJ5LnYxLkxpc3RSZWdpc3RyaWVzUmVzcG9uc2USTAoLR2V0UmVnaXN0cnkSHS5ub3RhcnkudjEuR2V0UmVnaXN0cnlSZXF1ZXN0Gh4ubm90YXJ5LnYxLkdldFJlZ2lzdHJ5UmVzcG9uc2USVQoOQ3JlYXRlUmVnaXN0cnkSIC5ub3RhcnkudjEuQ3JlYXRlUmVnaXN0cnlSZXF1ZXN0GiEubm90YXJ5LnYxLkNyZWF0ZVJlZ2lzdHJ5UmVzcG9uc2USVQoOVXBkYXRlUmVnaXN0cnkSIC5ub3RhcnkudjEuVXBkYXRlUmVnaXN0cnlSZXF1ZXN0GiEubm90YXJ5LnYxLlVwZGF0ZVJlZ2lzdHJ5UmVzcG9uc2USVQoORGVsZXRlUmVnaXN0cnkSIC5ub3RhcnkudjEuRGVsZXRlUmVnaXN0cnlSZXF1ZXN0GiEubm90YXJ5LnYxLkRlbGV0ZVJlZ2lzdHJ5UmVzcG9uc2USTwoMU3luY1JlZ2lzdHJ5Eh4ubm90YXJ5LnYxLlN5bmNSZWdpc3RyeVJlcXVlc3QaHy5ub3RhcnkudjEuU3luY1JlZ2lzdHJ5UmVzcG9uc2USTwoMVGVzdFJlZ2lzdHJ5Eh4ubm90YXJ5LnYxLlRlc3RSZWdpc3RyeVJlcXVlc3QaHy5ub3RhcnkudjEuVGVzdFJlZ2lzdHJ5UmVzcG9uc2UyngEKDEltYWdlU2VydmljZRJJCgpMaXN0SW1hZ2VzEhwubm90YXJ5LnYxLkxpc3RJbWFnZXNSZXF1ZXN0Gh0ubm90YXJ5LnYxLkxpc3RJbWFnZXNSZXNwb25zZRJDCghHZXRJbWFnZRIaLm5vdGFyeS52MS5HZXRJbWFnZVJlcXVlc3QaGy5ub3RhcnkudjEuR2V0SW1hZ2VSZXNwb25zZTK7BAoRUmVwb3NpdG9yeVNlcnZpY2USWwoQTGlzdFJlcG9zaXRvcmllcxIiLm5vdGFyeS52MS5MaXN0UmVwb3NpdG9yaWVzUmVxdWVzdBojLm5vdGFyeS52MS5MaXN0UmVwb3NpdG9yaWVzUmVzcG9uc2USUgoNR2V0UmVwb3NpdG9yeRIfLm5vdGFyeS52MS5HZXRSZXBvc2l0b3J5UmVxdWVzdBogLm5vdGFyeS52MS5HZXRSZXBvc2l0b3J5UmVzcG9uc2USWwoQQ3JlYXRlUmVwb3NpdG9yeRIiLm5vdGFyeS52MS5DcmVhdGVSZXBvc2l0b3J5UmVxdWVzdBojLm5vdGFyeS52MS5DcmVhdGVSZXBvc2l0b3J5UmVzcG9uc2USWwoQVXBkYXRlUmVwb3NpdG9yeRIiLm5vdGFyeS52MS5VcGRhdGVSZXBvc2l0b3J5UmVxdWVzdBojLm5vdGFyeS52MS5VcGRhdGVSZXBvc2l0b3J5UmVzcG9uc2USWwoQRGVsZXRlUmVwb3NpdG9yeRIiLm5vdGFyeS52MS5EZWxldGVSZXBvc2l0b3J5UmVxdWVzdBojLm5vdGFyeS52MS5EZWxldGVSZXBvc2l0b3J5UmVzcG9uc2USXgoRUHJldmlld1JlcG9zaXRvcnkSIy5ub3RhcnkudjEuUHJldmlld1JlcG9zaXRvcnlSZXF1ZXN0GiQubm90YXJ5LnYxLlByZXZpZXdSZXBvc2l0b3J5UmVzcG9uc2VCSlpIZ2l0aHViLmNvbS9sdWNhcmlja2xpL2ZsYXRwYWstb2NpLW5vdGFyeS9pbnRlcm5hbC9nZW4vbm90YXJ5L3YxO25vdGFyeXYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("ChZub3RhcnkvdjEvbm90YXJ5LnByb3RvEglub3RhcnkudjEiEAoOR2V0SW5mb1JlcXVlc3QiYwoPR2V0SW5mb1Jlc3BvbnNlEg8KB3ZlcnNpb24YASABKAkSEgoKcHVibGljX3VybBgCIAEoCRIUCgxhdXRoX2VuYWJsZWQYAyABKAgSFQoNZW1iZWRkZWRfc3luYxgEIAEoCCIOCgxHZXRNZVJlcXVlc3QiNAoEVXNlchIPCgdzdWJqZWN0GAEgASgJEg0KBWVtYWlsGAIgASgJEgwKBG5hbWUYAyABKAkiWwoNR2V0TWVSZXNwb25zZRIVCg1hdXRoZW50aWNhdGVkGAEgASgIEhQKDGF1dGhfZW5hYmxlZBgCIAEoCBIdCgR1c2VyGAMgASgLMg8ubm90YXJ5LnYxLlVzZXIiFAoSR2V0T3ZlcnZpZXdSZXF1ZXN0Im8KE0dldE92ZXJ2aWV3UmVzcG9uc2USEgoKcmVnaXN0cmllcxgBIAEoBRIUCgxyZXBvc2l0b3JpZXMYAiABKAUSDgoGaW1hZ2VzGAMgASgFEgwKBGFwcHMYBCABKAUSEAoIcnVudGltZXMYBSABKAUiDwoNTG9nb3V0UmVxdWVzdCIQCg5Mb2dvdXRSZXNwb25zZSKMBQoIUmVnaXN0cnkSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRILCgN1cmwYAyABKAkSEAoIaW5zZWN1cmUYBCABKAgSJgoJYXV0aF90eXBlGAUgASgOMhMubm90YXJ5LnYxLkF1dGhUeXBlEhAKCHVzZXJuYW1lGAYgASgJEhQKDGhhc19wYXNzd29yZBgHIAEoCBITCgt1c2VfY2F0YWxvZxgIIAEoCBIUCgxyZXBvc2l0b3JpZXMYCSADKAkSGwoTcmVwb3NpdG9yeV9wYXR0ZXJucxgKIAMoCRIUCgx0YWdfcGF0dGVybnMYCyADKAkSHQoVc3luY19pbnRlcnZhbF9taW51dGVzGAwgASgFEigKCnN5bmNfc3RhdGUYDSABKA4yFC5ub3RhcnkudjEuU3luY1N0YXRlEjAKDGxhc3Rfc3luY19hdBgOIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFwoPbGFzdF9zeW5jX2Vycm9yGA8gASgJEh0KFWxhc3Rfc3luY19kdXJhdGlvbl9tcxgQIAEoAxITCgtpbWFnZV9jb3VudBgRIAEoBRIYChByZXBvc2l0b3J5X2NvdW50GBIgASgFEi4KCmNyZWF0ZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDnN5bmNfcmVxdWVzdGVkGBUgASgIEh4KFnN5bmNfcmVwb3NpdG9yaWVzX2RvbmUYFiABKAUSHwoXc3luY19yZXBvc2l0b3JpZXNfdG90YWwYFyABKAUilwIKDVJlZ2lzdHJ5SW5wdXQSDAoEbmFtZRgBIAEoCRILCgN1cmwYAiABKAkSEAoIaW5zZWN1cmUYAyABKAgSJgoJYXV0aF90eXBlGAQgASgOMhMubm90YXJ5LnYxLkF1dGhUeXBlEhAKCHVzZXJuYW1lGAUgASgJEhUKCHBhc3N3b3JkGAYgASgJSACIAQESEwoLdXNlX2NhdGFsb2cYByABKAgSFAoMcmVwb3NpdG9yaWVzGAggAygJEhsKE3JlcG9zaXRvcnlfcGF0dGVybnMYCSADKAkSFAoMdGFnX3BhdHRlcm5zGAogAygJEh0KFXN5bmNfaW50ZXJ2YWxfbWludXRlcxgLIAEoBUILCglfcGFzc3dvcmQiFwoVTGlzdFJlZ2lzdHJpZXNSZXF1ZXN0IkEKFkxpc3RSZWdpc3RyaWVzUmVzcG9uc2USJwoKcmVnaXN0cmllcxgBIAMoCzITLm5vdGFyeS52MS5SZWdpc3RyeSIgChJHZXRSZWdpc3RyeVJlcXVlc3QSCgoCaWQYASABKAkiPAoTR2V0UmVnaXN0cnlSZXNwb25zZRIlCghyZWdpc3RyeRgBIAEoCzITLm5vdGFyeS52MS5SZWdpc3RyeSJDChVDcmVhdGVSZWdpc3RyeVJlcXVlc3QSKgoIcmVnaXN0cnkYASABKAsyGC5ub3RhcnkudjEuUmVnaXN0cnlJbnB1dCI/ChZDcmVhdGVSZWdpc3RyeVJlc3BvbnNlEiUKCHJlZ2lzdHJ5GAEgASgLMhMubm90YXJ5LnYxLlJlZ2lzdHJ5Ik8KFVVwZGF0ZVJlZ2lzdHJ5UmVxdWVzdBIKCgJpZBgBIAEoCRIqCghyZWdpc3RyeRgCIAEoCzIYLm5vdGFyeS52MS5SZWdpc3RyeUlucHV0Ij8KFlVwZGF0ZVJlZ2lzdHJ5UmVzcG9uc2USJQoIcmVnaXN0cnkYASABKAsyEy5ub3RhcnkudjEuUmVnaXN0cnkiIwoVRGVsZXRlUmVnaXN0cnlSZXF1ZXN0EgoKAmlkGAEgASgJIhgKFkRlbGV0ZVJlZ2lzdHJ5UmVzcG9uc2UiIQoTU3luY1JlZ2lzdHJ5UmVxdWVzdBIKCgJpZBgBIAEoCSI9ChRTeW5jUmVnaXN0cnlSZXNwb25zZRIlCghyZWdpc3RyeRgBIAEoCzITLm5vdGFyeS52MS5SZWdpc3RyeSJZChNUZXN0UmVnaXN0cnlSZXF1ZXN0EioKCHJlZ2lzdHJ5GAEgASgLMhgubm90YXJ5LnYxLlJlZ2lzdHJ5SW5wdXQSDwoCaWQYAiABKAlIAIgBAUIFCgNfaWQiaQoUVGVzdFJlZ2lzdHJ5UmVzcG9uc2USCgoCb2sYASABKAgSDQoFZXJyb3IYAiABKAkSGQoRY2F0YWxvZ19zdXBwb3J0ZWQYAyABKAgSGwoTc2FtcGxlX3JlcG9zaXRvcmllcxgEIAMoCSKVBAoFSW1hZ2USCgoCaWQYASABKAkSEwoLcmVnaXN0cnlfaWQYAiABKAkSFQoNcmVnaXN0cnlfbmFtZRgDIAEoCRISCgpyZXBvc2l0b3J5GAQgASgJEg4KBmRpZ2VzdBgFIAEoCRISCgptZWRpYV90eXBlGAYgASgJEgoKAm9zGAcgASgJEhQKDGFyY2hpdGVjdHVyZRgIIAEoCRIMCgR0YWdzGAkgAygJEgsKA3JlZhgKIAEoCRIgCgRraW5kGAsgASgOMhIubm90YXJ5LnYxLlJlZktpbmQSEgoKZmxhdHBha19pZBgMIAEoCRIMCgRhcmNoGA0gASgJEg4KBmJyYW5jaBgOIAEoCRIMCgRuYW1lGA8gASgJEg8KB3N1bW1hcnkYECABKAkSDwoHdmVyc2lvbhgRIAEoCRIWCg5pbnN0YWxsZWRfc2l6ZRgSIAEoAxIVCg1kb3dubG9hZF9zaXplGBMgASgDEisKB2NyZWF0ZWQYFCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhAKCGhhc19pY29uGBUgASgIEi4KCmluZGV4ZWRfYXQYFiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg8KB3J1bnRpbWUYFyABKAkSFAoMZXh0ZW5zaW9uX29mGBggASgJEhYKDmhhc19leHRyYV9kYXRhGBkgASgIIqYBChFMaXN0SW1hZ2VzUmVxdWVzdBITCgtyZWdpc3RyeV9pZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIgCgRraW5kGAMgASgOMhIubm90YXJ5LnYxLlJlZktpbmQSEgoKZmxhdHBha19pZBgEIAEoCRIUCgxhcmNoaXRlY3R1cmUYBSABKAkSEQoJcGFnZV9zaXplGAYgASgFEg4KBm9mZnNldBgHIAEoBSJKChJMaXN0SW1hZ2VzUmVzcG9uc2USIAoGaW1hZ2VzGAEgAygLMhAubm90YXJ5LnYxLkltYWdlEhIKCnRvdGFsX3NpemUYAiABKAUiZQocTGlzdEltYWdlUmVwb3NpdG9yaWVzUmVxdWVzdBITCgtyZWdpc3RyeV9pZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIRCglwYWdlX3NpemUYAyABKAUSDgoGb2Zmc2V0GAQgASgFItkBCg9JbWFnZVJlcG9zaXRvcnkSEwoLcmVnaXN0cnlfaWQYASABKAkSFQoNcmVnaXN0cnlfbmFtZRgCIAEoCRISCgpyZXBvc2l0b3J5GAMgASgJEhMKC2ZsYXRwYWtfaWRzGAQgAygJEgwKBG5hbWUYBSABKAkSIAoEa2luZBgGIAEoDjISLm5vdGFyeS52MS5SZWZLaW5kEhMKC2ltYWdlX2NvdW50GAcgASgFEhUKDWFyY2hpdGVjdHVyZXMYCCADKAkSFQoNaWNvbl9pbWFnZV9pZBgJIAEoCSJlCh1MaXN0SW1hZ2VSZXBvc2l0b3JpZXNSZXNwb25zZRIwCgxyZXBvc2l0b3JpZXMYASADKAsyGi5ub3RhcnkudjEuSW1hZ2VSZXBvc2l0b3J5EhIKCnRvdGFsX3NpemUYAiABKAUiJwoLUmVnaXN0cnlSZWYSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCSK1AgoHUGFja2FnZRIgCgRraW5kGAEgASgOMhIubm90YXJ5LnYxLlJlZktpbmQSEgoKZmxhdHBha19pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg8KB3N1bW1hcnkYBCABKAkSDwoHdmVyc2lvbhgFIAEoCRIVCg1hcmNoaXRlY3R1cmVzGAYgAygJEhAKCGJyYW5jaGVzGAcgAygJEioKCnJlZ2lzdHJpZXMYCCADKAsyFi5ub3RhcnkudjEuUmVnaXN0cnlSZWYSEwoLaW1hZ2VfY291bnQYCSABKAUSFQoNaWNvbl9pbWFnZV9pZBgKIAEoCRIWCg5oYXNfZXh0cmFfZGF0YRgLIAEoCBIrCgd1cGRhdGVkGAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKUAQoTTGlzdFBhY2thZ2VzUmVxdWVzdBITCgtyZWdpc3RyeV9pZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIgCgRraW5kGAMgASgOMhIubm90YXJ5LnYxLlJlZktpbmQSFAoMYXJjaGl0ZWN0dXJlGAQgASgJEhEKCXBhZ2Vfc2l6ZRgFIAEoBRIOCgZvZmZzZXQYBiABKAUiUAoUTGlzdFBhY2thZ2VzUmVzcG9uc2USJAoIcGFja2FnZXMYASADKAsyEi5ub3RhcnkudjEuUGFja2FnZRISCgp0b3RhbF9zaXplGAIgASgFIkkKEUdldFBhY2thZ2VSZXF1ZXN0EiAKBGtpbmQYASABKA4yEi5ub3RhcnkudjEuUmVmS2luZBISCgpmbGF0cGFrX2lkGAIgASgJIl0KEkdldFBhY2thZ2VSZXNwb25zZRIjCgdwYWNrYWdlGAEgASgLMhIubm90YXJ5LnYxLlBhY2thZ2USIgoIdmFyaWFudHMYAiADKAsyEC5ub3RhcnkudjEuSW1hZ2UiHQoPR2V0SW1hZ2VSZXF1ZXN0EgoKAmlkGAEgASgJIq0BChBHZXRJbWFnZVJlc3BvbnNlEh8KBWltYWdlGAEgASgLMhAubm90YXJ5LnYxLkltYWdlEjcKBmxhYmVscxgCIAMoCzInLm5vdGFyeS52MS5HZXRJbWFnZVJlc3BvbnNlLkxhYmVsc0VudHJ5EhAKCG1ldGFkYXRhGAMgASgJGi0KC0xhYmVsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiXwoGU291cmNlEhoKEnJlcG9zaXRvcnlfcGF0dGVybhgBIAEoCRITCgtyZWZfcGF0dGVybhgCIAEoCRITCgt0YWdfcGF0dGVybhgDIAEoCRIPCgdleGNsdWRlGAQgASgIIkQKDlJlcG9zaXRvcnlVcmxzEg4KBnJlbW90ZRgBIAEoCRITCgtmbGF0cGFrcmVwbxgCIAEoCRINCgVpbmRleBgDIAEoCSLKAgoKUmVwb3NpdG9yeRIKCgJpZBgBIAEoCRIMCgRzbHVnGAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhAKCGhvbWVwYWdlGAUgASgJEhMKC3JlZ2lzdHJ5X2lkGAYgASgJEhUKDXJlZ2lzdHJ5X25hbWUYByABKAkSIgoHc291cmNlcxgIIAMoCzIRLm5vdGFyeS52MS5Tb3VyY2USEwoLaW1hZ2VfY291bnQYCSABKAUSJwoEdXJscxgKIAEoCzIZLm5vdGFyeS52MS5SZXBvc2l0b3J5VXJscxIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKOAQoPUmVwb3NpdG9yeUlucHV0EgwKBHNsdWcYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEAoIaG9tZXBhZ2UYBCABKAkSEwoLcmVnaXN0cnlfaWQYBSABKAkSIgoHc291cmNlcxgGIAMoCzIRLm5vdGFyeS52MS5Tb3VyY2UiGQoXTGlzdFJlcG9zaXRvcmllc1JlcXVlc3QiRwoYTGlzdFJlcG9zaXRvcmllc1Jlc3BvbnNlEisKDHJlcG9zaXRvcmllcxgBIAMoCzIVLm5vdGFyeS52MS5SZXBvc2l0b3J5IiIKFEdldFJlcG9zaXRvcnlSZXF1ZXN0EgoKAmlkGAEgASgJIkIKFUdldFJlcG9zaXRvcnlSZXNwb25zZRIpCgpyZXBvc2l0b3J5GAEgASgLMhUubm90YXJ5LnYxLlJlcG9zaXRvcnkiSQoXQ3JlYXRlUmVwb3NpdG9yeVJlcXVlc3QSLgoKcmVwb3NpdG9yeRgBIAEoCzIaLm5vdGFyeS52MS5SZXBvc2l0b3J5SW5wdXQiRQoYQ3JlYXRlUmVwb3NpdG9yeVJlc3BvbnNlEikKCnJlcG9zaXRvcnkYASABKAsyFS5ub3RhcnkudjEuUmVwb3NpdG9yeSJVChdVcGRhdGVSZXBvc2l0b3J5UmVxdWVzdBIKCgJpZBgBIAEoCRIuCgpyZXBvc2l0b3J5GAIgASgLMhoubm90YXJ5LnYxLlJlcG9zaXRvcnlJbnB1dCJFChhVcGRhdGVSZXBvc2l0b3J5UmVzcG9uc2USKQoKcmVwb3NpdG9yeRgBIAEoCzIVLm5vdGFyeS52MS5SZXBvc2l0b3J5IiUKF0RlbGV0ZVJlcG9zaXRvcnlSZXF1ZXN0EgoKAmlkGAEgASgJIhoKGERlbGV0ZVJlcG9zaXRvcnlSZXNwb25zZSJsChhQcmV2aWV3UmVwb3NpdG9yeVJlcXVlc3QSCgoCaWQYASABKAkSFAoMYXJjaGl0ZWN0dXJlGAIgASgJEgsKA3RhZxgDIAEoCRIRCglwYWdlX3NpemUYBCABKAUSDgoGb2Zmc2V0GAUgASgFImIKDk1pc3NpbmdSdW50aW1lEg8KB3J1bnRpbWUYASABKAkSEQoJbmVlZGVkX2J5GAIgAygJEiwKDGF2YWlsYWJsZV9pbhgDIAMoCzIWLm5vdGFyeS52MS5SZWdpc3RyeVJlZiKGAQoZUHJldmlld1JlcG9zaXRvcnlSZXNwb25zZRIgCgZpbWFnZXMYASADKAsyEC5ub3RhcnkudjEuSW1hZ2USEgoKdG90YWxfc2l6ZRgCIAEoBRIzChBtaXNzaW5nX3J1bnRpbWVzGAMgAygLMhkubm90YXJ5LnYxLk1pc3NpbmdSdW50aW1lKlMKCEF1dGhUeXBlEhkKFUFVVEhfVFlQRV9VTlNQRUNJRklFRBAAEhcKE0FVVEhfVFlQRV9BTk9OWU1PVVMQARITCg9BVVRIX1RZUEVfQkFTSUMQAip+CglTeW5jU3RhdGUSGgoWU1lOQ19TVEFURV9VTlNQRUNJRklFRBAAEhQKEFNZTkNfU1RBVEVfTkVWRVIQARIWChJTWU5DX1NUQVRFX1NZTkNJTkcQAhIRCg1TWU5DX1NUQVRFX09LEAMSFAoQU1lOQ19TVEFURV9FUlJPUhAEKksKB1JlZktpbmQSGAoUUkVGX0tJTkRfVU5TUEVDSUZJRUQQABIQCgxSRUZfS0lORF9BUFAQARIUChBSRUZfS0lORF9SVU5USU1FEAIymgIKDVN5c3RlbVNlcnZpY2USQAoHR2V0SW5mbxIZLm5vdGFyeS52MS5HZXRJbmZvUmVxdWVzdBoaLm5vdGFyeS52MS5HZXRJbmZvUmVzcG9uc2USOgoFR2V0TWUSFy5ub3RhcnkudjEuR2V0TWVSZXF1ZXN0Ghgubm90YXJ5LnYxLkdldE1lUmVzcG9uc2USTAoLR2V0T3ZlcnZpZXcSHS5ub3RhcnkudjEuR2V0T3ZlcnZpZXdSZXF1ZXN0Gh4ubm90YXJ5LnYxLkdldE92ZXJ2aWV3UmVzcG9uc2USPQoGTG9nb3V0Ehgubm90YXJ5LnYxLkxvZ291dFJlcXVlc3QaGS5ub3RhcnkudjEuTG9nb3V0UmVzcG9uc2Uy3QQKD1JlZ2lzdHJ5U2VydmljZRJVCg5MaXN0UmVnaXN0cmllcxIgLm5vdGFyeS52MS5MaXN0UmVnaXN0cmllc1JlcXVlc3QaIS5ub3RhcnkudjEuTGlzdFJlZ2lzdHJpZXNSZXNwb25zZRJMCgtHZXRSZWdpc3RyeRIdLm5vdGFyeS52MS5HZXRSZWdpc3RyeVJlcXVlc3QaHi5ub3RhcnkudjEuR2V0UmVnaXN0cnlSZXNwb25zZRJVCg5DcmVhdGVSZWdpc3RyeRIgLm5vdGFyeS52MS5DcmVhdGVSZWdpc3RyeVJlcXVlc3QaIS5ub3RhcnkudjEuQ3JlYXRlUmVnaXN0cnlSZXNwb25zZRJVCg5VcGRhdGVSZWdpc3RyeRIgLm5vdGFyeS52MS5VcGRhdGVSZWdpc3RyeVJlcXVlc3QaIS5ub3RhcnkudjEuVXBkYXRlUmVnaXN0cnlSZXNwb25zZRJVCg5EZWxldGVSZWdpc3RyeRIgLm5vdGFyeS52MS5EZWxldGVSZWdpc3RyeVJlcXVlc3QaIS5ub3RhcnkudjEuRGVsZXRlUmVnaXN0cnlSZXNwb25zZRJPCgxTeW5jUmVnaXN0cnkSHi5ub3RhcnkudjEuU3luY1JlZ2lzdHJ5UmVxdWVzdBofLm5vdGFyeS52MS5TeW5jUmVnaXN0cnlSZXNwb25zZRJPCgxUZXN0UmVnaXN0cnkSHi5ub3RhcnkudjEuVGVzdFJlZ2lzdHJ5UmVxdWVzdBofLm5vdGFyeS52MS5UZXN0UmVnaXN0cnlSZXNwb25zZTKmAwoMSW1hZ2VTZXJ2aWNlEkkKCkxpc3RJbWFnZXMSHC5ub3RhcnkudjEuTGlzdEltYWdlc1JlcXVlc3QaHS5ub3RhcnkudjEuTGlzdEltYWdlc1Jlc3BvbnNlEkMKCEdldEltYWdlEhoubm90YXJ5LnYxLkdldEltYWdlUmVxdWVzdBobLm5vdGFyeS52MS5HZXRJbWFnZVJlc3BvbnNlEmoKFUxpc3RJbWFnZVJlcG9zaXRvcmllcxInLm5vdGFyeS52MS5MaXN0SW1hZ2VSZXBvc2l0b3JpZXNSZXF1ZXN0Gigubm90YXJ5LnYxLkxpc3RJbWFnZVJlcG9zaXRvcmllc1Jlc3BvbnNlEk8KDExpc3RQYWNrYWdlcxIeLm5vdGFyeS52MS5MaXN0UGFja2FnZXNSZXF1ZXN0Gh8ubm90YXJ5LnYxLkxpc3RQYWNrYWdlc1Jlc3BvbnNlEkkKCkdldFBhY2thZ2USHC5ub3RhcnkudjEuR2V0UGFja2FnZVJlcXVlc3QaHS5ub3RhcnkudjEuR2V0UGFja2FnZVJlc3BvbnNlMrsEChFSZXBvc2l0b3J5U2VydmljZRJbChBMaXN0UmVwb3NpdG9yaWVzEiIubm90YXJ5LnYxLkxpc3RSZXBvc2l0b3JpZXNSZXF1ZXN0GiMubm90YXJ5LnYxLkxpc3RSZXBvc2l0b3JpZXNSZXNwb25zZRJSCg1HZXRSZXBvc2l0b3J5Eh8ubm90YXJ5LnYxLkdldFJlcG9zaXRvcnlSZXF1ZXN0GiAubm90YXJ5LnYxLkdldFJlcG9zaXRvcnlSZXNwb25zZRJbChBDcmVhdGVSZXBvc2l0b3J5EiIubm90YXJ5LnYxLkNyZWF0ZVJlcG9zaXRvcnlSZXF1ZXN0GiMubm90YXJ5LnYxLkNyZWF0ZVJlcG9zaXRvcnlSZXNwb25zZRJbChBVcGRhdGVSZXBvc2l0b3J5EiIubm90YXJ5LnYxLlVwZGF0ZVJlcG9zaXRvcnlSZXF1ZXN0GiMubm90YXJ5LnYxLlVwZGF0ZVJlcG9zaXRvcnlSZXNwb25zZRJbChBEZWxldGVSZXBvc2l0b3J5EiIubm90YXJ5LnYxLkRlbGV0ZVJlcG9zaXRvcnlSZXF1ZXN0GiMubm90YXJ5LnYxLkRlbGV0ZVJlcG9zaXRvcnlSZXNwb25zZRJeChFQcmV2aWV3UmVwb3NpdG9yeRIjLm5vdGFyeS52MS5QcmV2aWV3UmVwb3NpdG9yeVJlcXVlc3QaJC5ub3RhcnkudjEuUHJldmlld1JlcG9zaXRvcnlSZXNwb25zZUJKWkhnaXRodWIuY29tL2x1Y2FyaWNrbGkvZmxhdHBhay1vY2ktbm90YXJ5L2ludGVybmFsL2dlbi9ub3RhcnkvdjE7bm90YXJ5djFiBnByb3RvMw", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message notary.v1.GetInfoRequest
@@ -47,6 +47,15 @@ export type GetInfoResponse = Message<"notary.v1.GetInfoResponse"> & {
    * @generated from field: bool auth_enabled = 3;
    */
   authEnabled: boolean;
+
+  /**
+   * Whether this server runs the sync scheduler itself. When false, syncs are
+   * run by a separate "notary sync" process (e.g. a Kubernetes CronJob) and
+   * SyncRegistry only records a request for it.
+   *
+   * @generated from field: bool embedded_sync = 4;
+   */
+  embeddedSync: boolean;
 };
 
 /**
@@ -206,9 +215,9 @@ export const LogoutResponseSchema: GenMessage<LogoutResponse> = /*@__PURE__*/
  */
 export type Registry = Message<"notary.v1.Registry"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 
   /**
    * @generated from field: string name = 2;
@@ -324,6 +333,28 @@ export type Registry = Message<"notary.v1.Registry"> & {
    * @generated from field: google.protobuf.Timestamp updated_at = 20;
    */
   updatedAt?: Timestamp | undefined;
+
+  /**
+   * A sync was requested (SyncRegistry, or the registry was created/changed)
+   * and waits for a syncer to pick it up.
+   *
+   * @generated from field: bool sync_requested = 21;
+   */
+  syncRequested: boolean;
+
+  /**
+   * Progress of the running sync (sync_state SYNCING). total is 0 while the
+   * repositories are still being discovered. Indexed repositories become
+   * visible while the sync runs.
+   *
+   * @generated from field: int32 sync_repositories_done = 22;
+   */
+  syncRepositoriesDone: number;
+
+  /**
+   * @generated from field: int32 sync_repositories_total = 23;
+   */
+  syncRepositoriesTotal: number;
 };
 
 /**
@@ -437,9 +468,9 @@ export const ListRegistriesResponseSchema: GenMessage<ListRegistriesResponse> = 
  */
 export type GetRegistryRequest = Message<"notary.v1.GetRegistryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 };
 
 /**
@@ -505,9 +536,9 @@ export const CreateRegistryResponseSchema: GenMessage<CreateRegistryResponse> = 
  */
 export type UpdateRegistryRequest = Message<"notary.v1.UpdateRegistryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 
   /**
    * @generated from field: notary.v1.RegistryInput registry = 2;
@@ -544,9 +575,9 @@ export const UpdateRegistryResponseSchema: GenMessage<UpdateRegistryResponse> = 
  */
 export type DeleteRegistryRequest = Message<"notary.v1.DeleteRegistryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 };
 
 /**
@@ -574,9 +605,9 @@ export const DeleteRegistryResponseSchema: GenMessage<DeleteRegistryResponse> = 
  */
 export type SyncRegistryRequest = Message<"notary.v1.SyncRegistryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 };
 
 /**
@@ -615,9 +646,9 @@ export type TestRegistryRequest = Message<"notary.v1.TestRegistryRequest"> & {
   /**
    * Set to reuse the stored password of an existing registry.
    *
-   * @generated from field: optional int32 id = 2;
+   * @generated from field: optional string id = 2;
    */
-  id?: number | undefined;
+  id?: string | undefined;
 };
 
 /**
@@ -668,14 +699,14 @@ export const TestRegistryResponseSchema: GenMessage<TestRegistryResponse> = /*@_
  */
 export type Image = Message<"notary.v1.Image"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 
   /**
-   * @generated from field: int32 registry_id = 2;
+   * @generated from field: string registry_id = 2;
    */
-  registryId: number;
+  registryId: string;
 
   /**
    * @generated from field: string registry_name = 3;
@@ -792,6 +823,28 @@ export type Image = Message<"notary.v1.Image"> & {
    * @generated from field: google.protobuf.Timestamp indexed_at = 22;
    */
   indexedAt?: Timestamp | undefined;
+
+  /**
+   * From the flatpak metadata: the runtime this app (or extension/runtime)
+   * builds on, e.g. "org.fedoraproject.Platform/x86_64/f44"; empty if none.
+   *
+   * @generated from field: string runtime = 23;
+   */
+  runtime: string;
+
+  /**
+   * For extensions: the ref they extend ([ExtensionOf] ref); empty otherwise.
+   *
+   * @generated from field: string extension_of = 24;
+   */
+  extensionOf: string;
+
+  /**
+   * Installing downloads extra data from external URLs ([Extra Data]).
+   *
+   * @generated from field: bool has_extra_data = 25;
+   */
+  hasExtraData: boolean;
 };
 
 /**
@@ -806,14 +859,14 @@ export const ImageSchema: GenMessage<Image> = /*@__PURE__*/
  */
 export type ListImagesRequest = Message<"notary.v1.ListImagesRequest"> & {
   /**
-   * 0 = all registries.
+   * Empty = all registries.
    *
-   * @generated from field: int32 registry_id = 1;
+   * @generated from field: string registry_id = 1;
    */
-  registryId: number;
+  registryId: string;
 
   /**
-   * Free-text search in ref, name and repository.
+   * Free-text search (case-insensitive) in ref, name, summary and repository.
    *
    * @generated from field: string query = 2;
    */
@@ -825,6 +878,30 @@ export type ListImagesRequest = Message<"notary.v1.ListImagesRequest"> & {
    * @generated from field: notary.v1.RefKind kind = 3;
    */
   kind: RefKind;
+
+  /**
+   * Exact flatpak ID, e.g. "org.example.App" (all arches and branches).
+   *
+   * @generated from field: string flatpak_id = 4;
+   */
+  flatpakId: string;
+
+  /**
+   * Exact OCI architecture, e.g. "amd64". Empty = all.
+   *
+   * @generated from field: string architecture = 5;
+   */
+  architecture: string;
+
+  /**
+   * @generated from field: int32 page_size = 6;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: int32 offset = 7;
+   */
+  offset: number;
 };
 
 /**
@@ -839,9 +916,18 @@ export const ListImagesRequestSchema: GenMessage<ListImagesRequest> = /*@__PURE_
  */
 export type ListImagesResponse = Message<"notary.v1.ListImagesResponse"> & {
   /**
+   * Ordered by ref, then repository.
+   *
    * @generated from field: repeated notary.v1.Image images = 1;
    */
   images: Image[];
+
+  /**
+   * Total number of images matching the filters (ignoring pagination).
+   *
+   * @generated from field: int32 total_size = 2;
+   */
+  totalSize: number;
 };
 
 /**
@@ -852,13 +938,375 @@ export const ListImagesResponseSchema: GenMessage<ListImagesResponse> = /*@__PUR
   messageDesc(file_notary_v1_notary, 27);
 
 /**
+ * @generated from message notary.v1.ListImageRepositoriesRequest
+ */
+export type ListImageRepositoriesRequest = Message<"notary.v1.ListImageRepositoriesRequest"> & {
+  /**
+   * Empty = all registries.
+   *
+   * @generated from field: string registry_id = 1;
+   */
+  registryId: string;
+
+  /**
+   * Free-text search (case-insensitive) in repository, flatpak ID and name.
+   *
+   * @generated from field: string query = 2;
+   */
+  query: string;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: int32 offset = 4;
+   */
+  offset: number;
+};
+
+/**
+ * Describes the message notary.v1.ListImageRepositoriesRequest.
+ * Use `create(ListImageRepositoriesRequestSchema)` to create a new message.
+ */
+export const ListImageRepositoriesRequestSchema: GenMessage<ListImageRepositoriesRequest> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 28);
+
+/**
+ * An OCI repository containing flatpak images.
+ *
+ * @generated from message notary.v1.ImageRepository
+ */
+export type ImageRepository = Message<"notary.v1.ImageRepository"> & {
+  /**
+   * @generated from field: string registry_id = 1;
+   */
+  registryId: string;
+
+  /**
+   * @generated from field: string registry_name = 2;
+   */
+  registryName: string;
+
+  /**
+   * OCI repository path, e.g. "myorg/org.example.App".
+   *
+   * @generated from field: string repository = 3;
+   */
+  repository: string;
+
+  /**
+   * Distinct flatpak IDs of its images, sorted.
+   *
+   * @generated from field: repeated string flatpak_ids = 4;
+   */
+  flatpakIds: string[];
+
+  /**
+   * Appstream name of one of its images; may be empty.
+   *
+   * @generated from field: string name = 5;
+   */
+  name: string;
+
+  /**
+   * @generated from field: notary.v1.RefKind kind = 6;
+   */
+  kind: RefKind;
+
+  /**
+   * @generated from field: int32 image_count = 7;
+   */
+  imageCount: number;
+
+  /**
+   * Distinct OCI architectures, sorted.
+   *
+   * @generated from field: repeated string architectures = 8;
+   */
+  architectures: string[];
+
+  /**
+   * An image of this repository that has an icon (GET /icons/{id}); empty = none.
+   *
+   * @generated from field: string icon_image_id = 9;
+   */
+  iconImageId: string;
+};
+
+/**
+ * Describes the message notary.v1.ImageRepository.
+ * Use `create(ImageRepositorySchema)` to create a new message.
+ */
+export const ImageRepositorySchema: GenMessage<ImageRepository> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 29);
+
+/**
+ * @generated from message notary.v1.ListImageRepositoriesResponse
+ */
+export type ListImageRepositoriesResponse = Message<"notary.v1.ListImageRepositoriesResponse"> & {
+  /**
+   * Ordered by repository.
+   *
+   * @generated from field: repeated notary.v1.ImageRepository repositories = 1;
+   */
+  repositories: ImageRepository[];
+
+  /**
+   * @generated from field: int32 total_size = 2;
+   */
+  totalSize: number;
+};
+
+/**
+ * Describes the message notary.v1.ListImageRepositoriesResponse.
+ * Use `create(ListImageRepositoriesResponseSchema)` to create a new message.
+ */
+export const ListImageRepositoriesResponseSchema: GenMessage<ListImageRepositoriesResponse> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 30);
+
+/**
+ * @generated from message notary.v1.RegistryRef
+ */
+export type RegistryRef = Message<"notary.v1.RegistryRef"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+};
+
+/**
+ * Describes the message notary.v1.RegistryRef.
+ * Use `create(RegistryRefSchema)` to create a new message.
+ */
+export const RegistryRefSchema: GenMessage<RegistryRef> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 31);
+
+/**
+ * A flatpak (app or runtime) identified by kind + flatpak ID. Its images may
+ * come from several registries and cover several architectures and branches.
+ *
+ * @generated from message notary.v1.Package
+ */
+export type Package = Message<"notary.v1.Package"> & {
+  /**
+   * @generated from field: notary.v1.RefKind kind = 1;
+   */
+  kind: RefKind;
+
+  /**
+   * @generated from field: string flatpak_id = 2;
+   */
+  flatpakId: string;
+
+  /**
+   * Appstream name and summary of the newest variant; may be empty.
+   *
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string summary = 4;
+   */
+  summary: string;
+
+  /**
+   * Version of the newest variant; may be empty.
+   *
+   * @generated from field: string version = 5;
+   */
+  version: string;
+
+  /**
+   * Distinct OCI architectures, sorted.
+   *
+   * @generated from field: repeated string architectures = 6;
+   */
+  architectures: string[];
+
+  /**
+   * Distinct branches, sorted.
+   *
+   * @generated from field: repeated string branches = 7;
+   */
+  branches: string[];
+
+  /**
+   * Registries providing the package, sorted by name.
+   *
+   * @generated from field: repeated notary.v1.RegistryRef registries = 8;
+   */
+  registries: RegistryRef[];
+
+  /**
+   * @generated from field: int32 image_count = 9;
+   */
+  imageCount: number;
+
+  /**
+   * A variant with an icon (GET /icons/{id}); empty = none.
+   *
+   * @generated from field: string icon_image_id = 10;
+   */
+  iconImageId: string;
+
+  /**
+   * At least one variant downloads extra data on install.
+   *
+   * @generated from field: bool has_extra_data = 11;
+   */
+  hasExtraData: boolean;
+
+  /**
+   * Newest creation time among the variants.
+   *
+   * @generated from field: google.protobuf.Timestamp updated = 12;
+   */
+  updated?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message notary.v1.Package.
+ * Use `create(PackageSchema)` to create a new message.
+ */
+export const PackageSchema: GenMessage<Package> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 32);
+
+/**
+ * @generated from message notary.v1.ListPackagesRequest
+ */
+export type ListPackagesRequest = Message<"notary.v1.ListPackagesRequest"> & {
+  /**
+   * Only packages with images in this registry; empty = all.
+   *
+   * @generated from field: string registry_id = 1;
+   */
+  registryId: string;
+
+  /**
+   * Free-text search (case-insensitive) in flatpak ID, name and summary.
+   *
+   * @generated from field: string query = 2;
+   */
+  query: string;
+
+  /**
+   * Unspecified = all kinds.
+   *
+   * @generated from field: notary.v1.RefKind kind = 3;
+   */
+  kind: RefKind;
+
+  /**
+   * Only packages available for this OCI architecture; empty = all.
+   *
+   * @generated from field: string architecture = 4;
+   */
+  architecture: string;
+
+  /**
+   * @generated from field: int32 page_size = 5;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: int32 offset = 6;
+   */
+  offset: number;
+};
+
+/**
+ * Describes the message notary.v1.ListPackagesRequest.
+ * Use `create(ListPackagesRequestSchema)` to create a new message.
+ */
+export const ListPackagesRequestSchema: GenMessage<ListPackagesRequest> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 33);
+
+/**
+ * @generated from message notary.v1.ListPackagesResponse
+ */
+export type ListPackagesResponse = Message<"notary.v1.ListPackagesResponse"> & {
+  /**
+   * Ordered by display name (name, falling back to flatpak ID), case-insensitive, then flatpak ID and kind.
+   *
+   * @generated from field: repeated notary.v1.Package packages = 1;
+   */
+  packages: Package[];
+
+  /**
+   * @generated from field: int32 total_size = 2;
+   */
+  totalSize: number;
+};
+
+/**
+ * Describes the message notary.v1.ListPackagesResponse.
+ * Use `create(ListPackagesResponseSchema)` to create a new message.
+ */
+export const ListPackagesResponseSchema: GenMessage<ListPackagesResponse> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 34);
+
+/**
+ * @generated from message notary.v1.GetPackageRequest
+ */
+export type GetPackageRequest = Message<"notary.v1.GetPackageRequest"> & {
+  /**
+   * @generated from field: notary.v1.RefKind kind = 1;
+   */
+  kind: RefKind;
+
+  /**
+   * @generated from field: string flatpak_id = 2;
+   */
+  flatpakId: string;
+};
+
+/**
+ * Describes the message notary.v1.GetPackageRequest.
+ * Use `create(GetPackageRequestSchema)` to create a new message.
+ */
+export const GetPackageRequestSchema: GenMessage<GetPackageRequest> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 35);
+
+/**
+ * @generated from message notary.v1.GetPackageResponse
+ */
+export type GetPackageResponse = Message<"notary.v1.GetPackageResponse"> & {
+  /**
+   * @generated from field: notary.v1.Package package = 1;
+   */
+  package?: Package | undefined;
+
+  /**
+   * All images of the package, ordered by branch, architecture, registry name, repository.
+   *
+   * @generated from field: repeated notary.v1.Image variants = 2;
+   */
+  variants: Image[];
+};
+
+/**
+ * Describes the message notary.v1.GetPackageResponse.
+ * Use `create(GetPackageResponseSchema)` to create a new message.
+ */
+export const GetPackageResponseSchema: GenMessage<GetPackageResponse> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 36);
+
+/**
  * @generated from message notary.v1.GetImageRequest
  */
 export type GetImageRequest = Message<"notary.v1.GetImageRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 };
 
 /**
@@ -866,7 +1314,7 @@ export type GetImageRequest = Message<"notary.v1.GetImageRequest"> & {
  * Use `create(GetImageRequestSchema)` to create a new message.
  */
 export const GetImageRequestSchema: GenMessage<GetImageRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 28);
+  messageDesc(file_notary_v1_notary, 37);
 
 /**
  * @generated from message notary.v1.GetImageResponse
@@ -897,7 +1345,7 @@ export type GetImageResponse = Message<"notary.v1.GetImageResponse"> & {
  * Use `create(GetImageResponseSchema)` to create a new message.
  */
 export const GetImageResponseSchema: GenMessage<GetImageResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 29);
+  messageDesc(file_notary_v1_notary, 38);
 
 /**
  * A rule selecting images of the repository's registry. An image is served if
@@ -939,7 +1387,7 @@ export type Source = Message<"notary.v1.Source"> & {
  * Use `create(SourceSchema)` to create a new message.
  */
 export const SourceSchema: GenMessage<Source> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 30);
+  messageDesc(file_notary_v1_notary, 39);
 
 /**
  * @generated from message notary.v1.RepositoryUrls
@@ -972,16 +1420,16 @@ export type RepositoryUrls = Message<"notary.v1.RepositoryUrls"> & {
  * Use `create(RepositoryUrlsSchema)` to create a new message.
  */
 export const RepositoryUrlsSchema: GenMessage<RepositoryUrls> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 31);
+  messageDesc(file_notary_v1_notary, 40);
 
 /**
  * @generated from message notary.v1.Repository
  */
 export type Repository = Message<"notary.v1.Repository"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 
   /**
    * URL-safe identifier: [a-z0-9][a-z0-9._-]*
@@ -1009,9 +1457,9 @@ export type Repository = Message<"notary.v1.Repository"> & {
    * A repository serves images of exactly one upstream registry, because the
    * flatpak index format has a single "Registry" base URL.
    *
-   * @generated from field: int32 registry_id = 6;
+   * @generated from field: string registry_id = 6;
    */
-  registryId: number;
+  registryId: string;
 
   /**
    * @generated from field: string registry_name = 7;
@@ -1051,7 +1499,7 @@ export type Repository = Message<"notary.v1.Repository"> & {
  * Use `create(RepositorySchema)` to create a new message.
  */
 export const RepositorySchema: GenMessage<Repository> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 32);
+  messageDesc(file_notary_v1_notary, 41);
 
 /**
  * @generated from message notary.v1.RepositoryInput
@@ -1078,9 +1526,9 @@ export type RepositoryInput = Message<"notary.v1.RepositoryInput"> & {
   homepage: string;
 
   /**
-   * @generated from field: int32 registry_id = 5;
+   * @generated from field: string registry_id = 5;
    */
-  registryId: number;
+  registryId: string;
 
   /**
    * @generated from field: repeated notary.v1.Source sources = 6;
@@ -1093,7 +1541,7 @@ export type RepositoryInput = Message<"notary.v1.RepositoryInput"> & {
  * Use `create(RepositoryInputSchema)` to create a new message.
  */
 export const RepositoryInputSchema: GenMessage<RepositoryInput> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 33);
+  messageDesc(file_notary_v1_notary, 42);
 
 /**
  * @generated from message notary.v1.ListRepositoriesRequest
@@ -1106,7 +1554,7 @@ export type ListRepositoriesRequest = Message<"notary.v1.ListRepositoriesRequest
  * Use `create(ListRepositoriesRequestSchema)` to create a new message.
  */
 export const ListRepositoriesRequestSchema: GenMessage<ListRepositoriesRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 34);
+  messageDesc(file_notary_v1_notary, 43);
 
 /**
  * @generated from message notary.v1.ListRepositoriesResponse
@@ -1123,16 +1571,16 @@ export type ListRepositoriesResponse = Message<"notary.v1.ListRepositoriesRespon
  * Use `create(ListRepositoriesResponseSchema)` to create a new message.
  */
 export const ListRepositoriesResponseSchema: GenMessage<ListRepositoriesResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 35);
+  messageDesc(file_notary_v1_notary, 44);
 
 /**
  * @generated from message notary.v1.GetRepositoryRequest
  */
 export type GetRepositoryRequest = Message<"notary.v1.GetRepositoryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 };
 
 /**
@@ -1140,7 +1588,7 @@ export type GetRepositoryRequest = Message<"notary.v1.GetRepositoryRequest"> & {
  * Use `create(GetRepositoryRequestSchema)` to create a new message.
  */
 export const GetRepositoryRequestSchema: GenMessage<GetRepositoryRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 36);
+  messageDesc(file_notary_v1_notary, 45);
 
 /**
  * @generated from message notary.v1.GetRepositoryResponse
@@ -1157,7 +1605,7 @@ export type GetRepositoryResponse = Message<"notary.v1.GetRepositoryResponse"> &
  * Use `create(GetRepositoryResponseSchema)` to create a new message.
  */
 export const GetRepositoryResponseSchema: GenMessage<GetRepositoryResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 37);
+  messageDesc(file_notary_v1_notary, 46);
 
 /**
  * @generated from message notary.v1.CreateRepositoryRequest
@@ -1174,7 +1622,7 @@ export type CreateRepositoryRequest = Message<"notary.v1.CreateRepositoryRequest
  * Use `create(CreateRepositoryRequestSchema)` to create a new message.
  */
 export const CreateRepositoryRequestSchema: GenMessage<CreateRepositoryRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 38);
+  messageDesc(file_notary_v1_notary, 47);
 
 /**
  * @generated from message notary.v1.CreateRepositoryResponse
@@ -1191,16 +1639,16 @@ export type CreateRepositoryResponse = Message<"notary.v1.CreateRepositoryRespon
  * Use `create(CreateRepositoryResponseSchema)` to create a new message.
  */
 export const CreateRepositoryResponseSchema: GenMessage<CreateRepositoryResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 39);
+  messageDesc(file_notary_v1_notary, 48);
 
 /**
  * @generated from message notary.v1.UpdateRepositoryRequest
  */
 export type UpdateRepositoryRequest = Message<"notary.v1.UpdateRepositoryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 
   /**
    * @generated from field: notary.v1.RepositoryInput repository = 2;
@@ -1213,7 +1661,7 @@ export type UpdateRepositoryRequest = Message<"notary.v1.UpdateRepositoryRequest
  * Use `create(UpdateRepositoryRequestSchema)` to create a new message.
  */
 export const UpdateRepositoryRequestSchema: GenMessage<UpdateRepositoryRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 40);
+  messageDesc(file_notary_v1_notary, 49);
 
 /**
  * @generated from message notary.v1.UpdateRepositoryResponse
@@ -1230,16 +1678,16 @@ export type UpdateRepositoryResponse = Message<"notary.v1.UpdateRepositoryRespon
  * Use `create(UpdateRepositoryResponseSchema)` to create a new message.
  */
 export const UpdateRepositoryResponseSchema: GenMessage<UpdateRepositoryResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 41);
+  messageDesc(file_notary_v1_notary, 50);
 
 /**
  * @generated from message notary.v1.DeleteRepositoryRequest
  */
 export type DeleteRepositoryRequest = Message<"notary.v1.DeleteRepositoryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 };
 
 /**
@@ -1247,7 +1695,7 @@ export type DeleteRepositoryRequest = Message<"notary.v1.DeleteRepositoryRequest
  * Use `create(DeleteRepositoryRequestSchema)` to create a new message.
  */
 export const DeleteRepositoryRequestSchema: GenMessage<DeleteRepositoryRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 42);
+  messageDesc(file_notary_v1_notary, 51);
 
 /**
  * @generated from message notary.v1.DeleteRepositoryResponse
@@ -1260,16 +1708,16 @@ export type DeleteRepositoryResponse = Message<"notary.v1.DeleteRepositoryRespon
  * Use `create(DeleteRepositoryResponseSchema)` to create a new message.
  */
 export const DeleteRepositoryResponseSchema: GenMessage<DeleteRepositoryResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 43);
+  messageDesc(file_notary_v1_notary, 52);
 
 /**
  * @generated from message notary.v1.PreviewRepositoryRequest
  */
 export type PreviewRepositoryRequest = Message<"notary.v1.PreviewRepositoryRequest"> & {
   /**
-   * @generated from field: int32 id = 1;
+   * @generated from field: string id = 1;
    */
-  id: number;
+  id: string;
 
   /**
    * OCI architecture; empty = all.
@@ -1284,6 +1732,16 @@ export type PreviewRepositoryRequest = Message<"notary.v1.PreviewRepositoryReque
    * @generated from field: string tag = 3;
    */
   tag: string;
+
+  /**
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: int32 offset = 5;
+   */
+  offset: number;
 };
 
 /**
@@ -1291,16 +1749,68 @@ export type PreviewRepositoryRequest = Message<"notary.v1.PreviewRepositoryReque
  * Use `create(PreviewRepositoryRequestSchema)` to create a new message.
  */
 export const PreviewRepositoryRequestSchema: GenMessage<PreviewRepositoryRequest> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 44);
+  messageDesc(file_notary_v1_notary, 53);
+
+/**
+ * A runtime needed by served images but not served by the repository itself;
+ * clients need another remote providing it or the install fails.
+ *
+ * @generated from message notary.v1.MissingRuntime
+ */
+export type MissingRuntime = Message<"notary.v1.MissingRuntime"> & {
+  /**
+   * Runtime ref without kind, e.g. "org.fedoraproject.Platform/x86_64/f44".
+   *
+   * @generated from field: string runtime = 1;
+   */
+  runtime: string;
+
+  /**
+   * Flatpak IDs of the served images that need it, sorted.
+   *
+   * @generated from field: repeated string needed_by = 2;
+   */
+  neededBy: string[];
+
+  /**
+   * Registries (other than the repository's) that have it indexed, if any.
+   *
+   * @generated from field: repeated notary.v1.RegistryRef available_in = 3;
+   */
+  availableIn: RegistryRef[];
+};
+
+/**
+ * Describes the message notary.v1.MissingRuntime.
+ * Use `create(MissingRuntimeSchema)` to create a new message.
+ */
+export const MissingRuntimeSchema: GenMessage<MissingRuntime> = /*@__PURE__*/
+  messageDesc(file_notary_v1_notary, 54);
 
 /**
  * @generated from message notary.v1.PreviewRepositoryResponse
  */
 export type PreviewRepositoryResponse = Message<"notary.v1.PreviewRepositoryResponse"> & {
   /**
+   * Ordered by ref, then repository.
+   *
    * @generated from field: repeated notary.v1.Image images = 1;
    */
   images: Image[];
+
+  /**
+   * Total number of images the index would serve for these filters.
+   *
+   * @generated from field: int32 total_size = 2;
+   */
+  totalSize: number;
+
+  /**
+   * Computed over the whole selection (not just this page).
+   *
+   * @generated from field: repeated notary.v1.MissingRuntime missing_runtimes = 3;
+   */
+  missingRuntimes: MissingRuntime[];
 };
 
 /**
@@ -1308,7 +1818,7 @@ export type PreviewRepositoryResponse = Message<"notary.v1.PreviewRepositoryResp
  * Use `create(PreviewRepositoryResponseSchema)` to create a new message.
  */
 export const PreviewRepositoryResponseSchema: GenMessage<PreviewRepositoryResponse> = /*@__PURE__*/
-  messageDesc(file_notary_v1_notary, 45);
+  messageDesc(file_notary_v1_notary, 55);
 
 /**
  * @generated from enum notary.v1.AuthType
@@ -1489,7 +1999,8 @@ export const RegistryService: GenService<{
     output: typeof DeleteRegistryResponseSchema;
   },
   /**
-   * Starts a sync in the background; poll GetRegistry for sync_state.
+   * Starts a sync in the background (embedded syncer) or records a sync
+   * request for the external syncer; poll GetRegistry for sync_state.
    *
    * @generated from rpc notary.v1.RegistryService.SyncRegistry
    */
@@ -1532,6 +2043,38 @@ export const ImageService: GenService<{
     methodKind: "unary";
     input: typeof GetImageRequestSchema;
     output: typeof GetImageResponseSchema;
+  },
+  /**
+   * Lists the distinct OCI repositories containing flatpak images, e.g. for
+   * picking packages when editing repository rules.
+   *
+   * @generated from rpc notary.v1.ImageService.ListImageRepositories
+   */
+  listImageRepositories: {
+    methodKind: "unary";
+    input: typeof ListImageRepositoriesRequestSchema;
+    output: typeof ListImageRepositoriesResponseSchema;
+  },
+  /**
+   * Lists packages: images grouped by flatpak ID and kind across
+   * architectures, branches, tags and registries.
+   *
+   * @generated from rpc notary.v1.ImageService.ListPackages
+   */
+  listPackages: {
+    methodKind: "unary";
+    input: typeof ListPackagesRequestSchema;
+    output: typeof ListPackagesResponseSchema;
+  },
+  /**
+   * Returns one package and all its variants (images).
+   *
+   * @generated from rpc notary.v1.ImageService.GetPackage
+   */
+  getPackage: {
+    methodKind: "unary";
+    input: typeof GetPackageRequestSchema;
+    output: typeof GetPackageResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_notary_v1_notary, 2);

@@ -47,8 +47,8 @@ func syncStateToProto(s store.SyncState) notaryv1.SyncState {
 }
 
 func registryToProto(r *store.Registry) *notaryv1.Registry {
-	return &notaryv1.Registry{
-		Id:                  int32(r.ID),
+	out := &notaryv1.Registry{
+		Id:                  r.ID,
 		Name:                r.Name,
 		Url:                 r.URL,
 		Insecure:            r.Insecure,
@@ -63,12 +63,18 @@ func registryToProto(r *store.Registry) *notaryv1.Registry {
 		SyncState:           syncStateToProto(r.SyncState),
 		LastSyncAt:          tsPtr(r.LastSyncAt),
 		LastSyncError:       r.LastSyncError,
-		LastSyncDurationMs:  r.LastSyncDuration.Milliseconds(),
+		LastSyncDurationMs:  r.LastSyncDurationMs,
 		ImageCount:          int32(r.ImageCount),
 		RepositoryCount:     int32(r.RepositoryCount),
 		CreatedAt:           ts(r.CreatedAt),
 		UpdatedAt:           ts(r.UpdatedAt),
+		SyncRequested:       r.SyncRequested,
 	}
+	if r.SyncState == store.SyncSyncing {
+		out.SyncRepositoriesDone = int32(r.SyncRepositoriesDone)
+		out.SyncRepositoriesTotal = int32(r.SyncRepositoriesTotal)
+	}
+	return out
 }
 
 func refKindToProto(kind string) notaryv1.RefKind {
@@ -82,11 +88,10 @@ func refKindToProto(kind string) notaryv1.RefKind {
 	}
 }
 
-func imageToProto(img *store.Image, hasIcon bool) *notaryv1.Image {
-	kind, id, arch, branch := img.RefParts()
+func imageToProto(img *store.Image) *notaryv1.Image {
 	return &notaryv1.Image{
-		Id:            int32(img.ID),
-		RegistryId:    int32(img.RegistryID),
+		Id:            img.ID,
+		RegistryId:    img.RegistryID,
 		RegistryName:  img.RegistryName,
 		Repository:    img.Repository,
 		Digest:        img.Digest,
@@ -95,19 +100,83 @@ func imageToProto(img *store.Image, hasIcon bool) *notaryv1.Image {
 		Architecture:  img.Architecture,
 		Tags:          img.Tags,
 		Ref:           img.Ref,
-		Kind:          refKindToProto(kind),
-		FlatpakId:     id,
-		Arch:          arch,
-		Branch:        branch,
+		Kind:          refKindToProto(img.Kind),
+		FlatpakId:     img.FlatpakID,
+		Arch:          img.Arch,
+		Branch:        img.Branch,
 		Name:          img.Name,
 		Summary:       img.Summary,
 		Version:       img.Version,
 		InstalledSize: img.InstalledSize,
 		DownloadSize:  img.DownloadSize,
 		Created:       tsPtr(img.Created),
-		HasIcon:       hasIcon,
+		HasIcon:       img.HasIcon,
 		IndexedAt:     ts(img.IndexedAt),
+		Runtime:       img.Runtime,
+		ExtensionOf:   img.ExtensionOf,
+		HasExtraData:  img.HasExtraData,
 	}
+}
+
+func imagesToProto(images []*store.Image) []*notaryv1.Image {
+	out := make([]*notaryv1.Image, len(images))
+	for i, img := range images {
+		out[i] = imageToProto(img)
+	}
+	return out
+}
+
+func imageRepositoryToProto(r *store.ImageRepository) *notaryv1.ImageRepository {
+	return &notaryv1.ImageRepository{
+		RegistryId:    r.RegistryID,
+		RegistryName:  r.RegistryName,
+		Repository:    r.Repository,
+		FlatpakIds:    r.FlatpakIDs,
+		Name:          r.Name,
+		Kind:          refKindToProto(r.Kind),
+		ImageCount:    int32(r.ImageCount),
+		Architectures: r.Architectures,
+		IconImageId:   r.IconImageID,
+	}
+}
+
+func registryRefsToProto(refs []store.RegistryRef) []*notaryv1.RegistryRef {
+	out := make([]*notaryv1.RegistryRef, len(refs))
+	for i, r := range refs {
+		out[i] = &notaryv1.RegistryRef{Id: r.ID, Name: r.Name}
+	}
+	return out
+}
+
+func packageToProto(p *store.Package) *notaryv1.Package {
+	return &notaryv1.Package{
+		Kind:          refKindToProto(p.Kind),
+		FlatpakId:     p.FlatpakID,
+		Name:          p.Name,
+		Summary:       p.Summary,
+		Version:       p.Version,
+		Architectures: p.Architectures,
+		Branches:      p.Branches,
+		Registries:    registryRefsToProto(p.Registries),
+		ImageCount:    int32(p.ImageCount),
+		IconImageId:   p.IconImageID,
+		HasExtraData:  p.HasExtraData,
+		Updated:       tsPtr(p.Updated),
+	}
+}
+
+// missingRuntimesToProto pairs each missing runtime with the registries
+// providing its ref ("runtime/<runtime>").
+func missingRuntimesToProto(missing []flatpakindex.MissingRuntime, providers map[string][]store.RegistryRef) []*notaryv1.MissingRuntime {
+	out := make([]*notaryv1.MissingRuntime, len(missing))
+	for i, m := range missing {
+		out[i] = &notaryv1.MissingRuntime{
+			Runtime:     m.Runtime,
+			NeededBy:    m.NeededBy,
+			AvailableIn: registryRefsToProto(providers[store.KindRuntime+"/"+m.Runtime]),
+		}
+	}
+	return out
 }
 
 // strippedLabels returns labels without bulky icon data URIs.
@@ -149,12 +218,12 @@ func repositoryToProto(p *store.Repository, baseURL string, imageCount int) *not
 	}
 	urls := flatpakindex.RepositoryURLs(baseURL, p.Slug)
 	return &notaryv1.Repository{
-		Id:           int32(p.ID),
+		Id:           p.ID,
 		Slug:         p.Slug,
 		Title:        p.Title,
 		Description:  p.Description,
 		Homepage:     p.Homepage,
-		RegistryId:   int32(p.RegistryID),
+		RegistryId:   p.RegistryID,
 		RegistryName: p.RegistryName,
 		Sources:      sources,
 		ImageCount:   int32(imageCount),

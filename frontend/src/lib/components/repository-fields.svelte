@@ -4,8 +4,8 @@
 		title: string;
 		description: string;
 		homepage: string;
-		/** 0 = none selected. */
-		registryId: number;
+		/** Empty = none selected. */
+		registryId: string;
 	}
 </script>
 
@@ -77,8 +77,8 @@
 		<Field.FieldLabel for="repo-registry">Registry</Field.FieldLabel>
 		<Select.Root
 			type="single"
-			value={value.registryId ? String(value.registryId) : ''}
-			onValueChange={(v) => (value.registryId = Number(v) || 0)}
+			value={value.registryId}
+			onValueChange={(v) => (value.registryId = v)}
 		>
 			<Select.Trigger id="repo-registry" class="w-full md:w-80">
 				{registryName ?? 'Select a registry'}
@@ -86,7 +86,7 @@
 			<Select.Content>
 				<Select.Group>
 					{#each registries as r (r.id)}
-						<Select.Item value={String(r.id)} label={r.name}>
+						<Select.Item value={r.id} label={r.name}>
 							<span class="flex flex-col">
 								<span>{r.name}</span>
 								<span class="font-mono text-xs text-muted-foreground">{r.url}</span>

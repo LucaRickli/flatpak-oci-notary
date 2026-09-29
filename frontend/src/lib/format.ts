@@ -95,3 +95,14 @@ export function initials(name: string): string {
 	const parts = name.trim().split(/[\s@._-]+/).filter(Boolean);
 	return (parts[0]?.[0] ?? '?').toUpperCase() + (parts[1]?.[0] ?? '').toUpperCase();
 }
+
+/** Display name of a package: appstream name, falling back to the flatpak id. */
+export function packageTitle(pkg: { name: string; flatpakId: string }): string {
+	return pkg.name || pkg.flatpakId;
+}
+
+/** Short form of an OCI digest ("sha256:0123…" → "0123456789ab"). */
+export function shortDigest(digest: string): string {
+	const hex = digest.includes(':') ? digest.slice(digest.indexOf(':') + 1) : digest;
+	return hex.slice(0, 12);
+}

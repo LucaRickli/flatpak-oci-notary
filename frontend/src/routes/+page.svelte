@@ -7,11 +7,14 @@
 	import PageHeader from '$lib/components/page-header.svelte';
 	import StatCard from '$lib/components/stat-card.svelte';
 	import SyncStateBadge from '$lib/components/sync-state-badge.svelte';
+	import SyncProgress from '$lib/components/sync-progress.svelte';
+	import ExternalSyncNote from '$lib/components/external-sync-note.svelte';
 	import ErrorAlert from '$lib/components/error-alert.svelte';
 	import CopyButton from '$lib/components/copy-button.svelte';
-	import { registryClient, repositoryClient, SyncState, systemClient, type Registry } from '$lib/api';
+	import { registryClient, repositoryClient, systemClient, type Registry } from '$lib/api';
 	import { Resource } from '$lib/resource.svelte';
-	import { startSync } from '$lib/sync';
+	import { onSyncEnded, poll } from '$lib/poll.svelte';
+	import { isQueued, isSyncing, POLL_LIST_MS, startSync, syncAction, syncPollInterval } from '$lib/sync';
 	import { formatRelative } from '$lib/format';
 	import { cn } from '$lib/utils/shadcn';
 	import ServerIcon from '@lucide/svelte/icons/server';
@@ -27,20 +30,20 @@
 	const registries = new Resource(async () => (await registryClient.listRegistries({})).registries);
 	const repositories = new Resource(async () => (await repositoryClient.listRepositories({})).repositories);
 
-	const anySyncing = $derived(registries.current?.some((r) => r.syncState === SyncState.SYNCING) ?? false);
+	const anySyncing = $derived(registries.current?.some(isSyncing) ?? false);
 
-	// Poll while syncing; refresh the counts once all syncs are done.
-	let wasSyncing = false;
-	$effect(() => {
-		if (!anySyncing) {
-			if (wasSyncing) overview.refresh();
-			wasSyncing = false;
-			return;
+	// Poll the registry state (often while a sync runs or waits for a syncer, slowly otherwise, to
+	// notice syncs started elsewhere). The counts grow while a sync runs: refresh them in the
+	// background, and once more whenever a sync has ended.
+	poll(() => syncPollInterval(registries.current), registries.poll);
+	poll(() => (anySyncing ? POLL_LIST_MS : undefined), overview.poll);
+	onSyncEnded(
+		() => registries.current,
+		() => {
+			overview.poll();
+			repositories.poll();
 		}
-		wasSyncing = true;
-		const timer = setTimeout(registries.refresh, 2000);
-		return () => clearTimeout(timer);
-	});
+	);
 
 	async function sync(registry: Registry) {
 		const updated = await startSync(registry);
@@ -65,7 +68,7 @@
 
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 	<StatCard label="Registries" icon={ServerIcon} href="/registries" value={overview.current?.registries} />
-	<StatCard label="Packages" icon={PackageIcon} href="/packages" value={overview.current?.images}>
+	<StatCard label="Images" icon={PackageIcon} href="/packages" value={overview.current?.images}>
 		Flatpak images, all arches and tags
 	</StatCard>
 	<StatCard label="Apps / runtimes" icon={AppWindowIcon} href="/packages?kind=app" value={overview.current ? `${overview.current.apps} / ${overview.current.runtimes}` : undefined} />
@@ -121,7 +124,8 @@
 				</Empty.Root>
 			{:else}
 				{#each registries.current as registry (registry.id)}
-					{@const syncing = registry.syncState === SyncState.SYNCING}
+					{@const syncing = isSyncing(registry)}
+					{@const action = syncAction(registry)}
 					<Item.Root variant="outline" size="sm">
 						<Item.Content class="min-w-0">
 							<Item.Title class="w-full">
@@ -130,15 +134,24 @@
 							<Item.Description class="truncate">
 								{registry.imageCount} images · synced {formatRelative(registry.lastSyncAt)}
 							</Item.Description>
+							<SyncProgress {registry} class="w-full max-w-64 pt-1" />
 						</Item.Content>
 						<Item.Actions>
 							<SyncStateBadge {registry} />
-							<Button variant="ghost" size="icon-sm" aria-label="Sync {registry.name} now" title="Sync now" disabled={syncing} onclick={() => sync(registry)}>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="{action.label}: {registry.name}"
+								title={action.label}
+								disabled={syncing || isQueued(registry)}
+								onclick={() => sync(registry)}
+							>
 								<RefreshCwIcon class={cn(syncing && 'animate-spin')} />
 							</Button>
 						</Item.Actions>
 					</Item.Root>
 				{/each}
+				<ExternalSyncNote class="pt-1" />
 			{/if}
 		</Card.Content>
 	</Card.Root>

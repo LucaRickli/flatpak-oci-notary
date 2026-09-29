@@ -33,6 +33,24 @@ jobs:
   go:
     name: Go vet & test
     runs-on: ubuntu-latest
+    services:
+      # The store tests run against SQLite always and against Postgres when
+      # NOTARY_TEST_POSTGRES_DSN is set.
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: notary
+          POSTGRES_PASSWORD: notary
+          POSTGRES_DB: notary
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U notary"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NOTARY_TEST_POSTGRES_DSN: postgres://notary:notary@localhost:5432/notary?sslmode=disable
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
@@ -42,6 +60,8 @@ jobs:
         run: test -z "$(gofmt -l cmd internal frontend/*.go | tee /dev/stderr)"
       - run: go vet -tags noui ./...
       - run: go test -race -tags noui ./...
+      - name: CGO-free build
+        run: CGO_ENABLED=0 go build -tags noui ./cmd/notary
 
   frontend:
     name: Frontend check & build
@@ -55,6 +75,8 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno install --frozen
+      - name: Unit tests (flatpak metadata parsing, permission ratings, URL sanitizing)
+        run: deno task test
       - run: deno task check
       - run: deno task build
 

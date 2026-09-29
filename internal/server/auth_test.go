@@ -11,7 +11,6 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -26,7 +25,7 @@ import (
 	"github.com/lucarickli/flatpak-oci-notary/internal/gen/notary/v1/notaryv1connect"
 	"github.com/lucarickli/flatpak-oci-notary/internal/indexer"
 	"github.com/lucarickli/flatpak-oci-notary/internal/server"
-	"github.com/lucarickli/flatpak-oci-notary/internal/store"
+	"github.com/lucarickli/flatpak-oci-notary/internal/store/storetest"
 )
 
 // fakeIdP is a minimal OIDC provider: discovery, JWKS, an authorize endpoint
@@ -113,9 +112,7 @@ func newFakeIdP(t *testing.T) *fakeIdP {
 func TestOIDCLogin(t *testing.T) {
 	ctx := context.Background()
 	idp := newFakeIdP(t)
-	st, err := store.Open(ctx, filepath.Join(t.TempDir(), "notary.db"))
-	must(t, err)
-	defer st.Close()
+	st := storetest.SQLite(t)
 	logger := zerolog.New(zerolog.NewTestWriter(t))
 
 	// The notary's URL must be known before creating the authenticator.

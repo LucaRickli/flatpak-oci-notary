@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/lucarickli/flatpak-oci-notary/internal/auth"
 	"github.com/lucarickli/flatpak-oci-notary/internal/flatpakindex"
+	"github.com/lucarickli/flatpak-oci-notary/internal/flatpakmeta"
 	notaryv1 "github.com/lucarickli/flatpak-oci-notary/internal/gen/notary/v1"
 	"github.com/lucarickli/flatpak-oci-notary/internal/gen/notary/v1/notaryv1connect"
 	"github.com/lucarickli/flatpak-oci-notary/internal/indexer"
@@ -40,14 +40,30 @@ func baseURL(ctx context.Context) string {
 
 // API implements all Connect services.
 type API struct {
-	store   *store.Store
+	store *store.Store
+	// indexer runs syncs in this process; nil when they run in a separate
+	// "notary sync" process, in which case syncs are only requested.
 	indexer *indexer.Indexer
 	auth    *auth.Authenticator // nil when authentication is disabled
 	log     zerolog.Logger
 }
 
+// New builds the API. x is nil when this server does not run the sync
+// scheduler itself (see GetInfoResponse.embedded_sync).
 func New(s *store.Store, x *indexer.Indexer, a *auth.Authenticator, log zerolog.Logger) *API {
 	return &API{store: s, indexer: x, auth: a, log: log.With().Str("component", "api").Logger()}
+}
+
+// embeddedSync reports whether syncs run in this process.
+func (a *API) embeddedSync() bool { return a.indexer != nil }
+
+// startSync starts the requested sync of a registry right away when the
+// embedded syncer runs; otherwise the request recorded in the store waits
+// for the external syncer.
+func (a *API) startSync(ctx context.Context, registryID string) {
+	if a.indexer != nil {
+		a.indexer.Trigger(ctx, registryID)
+	}
 }
 
 // Handler returns the HTTP handler serving all services below /api.
@@ -112,6 +128,67 @@ func invalid(format string, args ...any) error {
 	return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf(format, args...))
 }
 
+// requiredID parses a UUID field of a request. A malformed id is an invalid
+// argument (never an internal error); a well-formed but unknown one is
+// reported as not found by the lookup it is used in.
+func requiredID(field, value string) (string, error) {
+	id, err := store.ParseID(value)
+	if err != nil {
+		return "", invalid("%s: %v", field, err)
+	}
+	return id, nil
+}
+
+// optionalID is requiredID for filters, where empty means "all".
+func optionalID(field, value string) (string, error) {
+	if strings.TrimSpace(value) == "" {
+		return "", nil
+	}
+	return requiredID(field, value)
+}
+
+// textField trims a free-text request field (a search query, a filter or a
+// lookup key). A NUL byte is an invalid argument: stored values never
+// contain one (see store.CleanText), and Postgres rejects it in parameters,
+// which would otherwise surface as an internal error. It is rejected rather
+// than stripped, so "a\x00b" never matches "ab". (Invalid UTF-8 cannot
+// arrive: protobuf rejects it when decoding.)
+func textField(field, value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if strings.IndexByte(value, 0) >= 0 {
+		return "", invalid("%s must not contain NUL characters", field)
+	}
+	return value, nil
+}
+
+// textFields applies textField to the fields in place, reporting the first
+// invalid one.
+func textFields(fields ...namedText) error {
+	for _, f := range fields {
+		clean, err := textField(f.name, *f.value)
+		if err != nil {
+			return err
+		}
+		*f.value = clean
+	}
+	return nil
+}
+
+type namedText struct {
+	name  string
+	value *string
+}
+
+// noNUL rejects NUL characters in stored input fields (see textField).
+func noNUL(field string, values ...string) error {
+	for _, v := range values {
+		if strings.IndexByte(v, 0) >= 0 {
+			return invalid("%s must not contain NUL characters", field)
+		}
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // SystemService
 
@@ -119,9 +196,10 @@ type systemService struct{ *API }
 
 func (s systemService) GetInfo(ctx context.Context, _ *connect.Request[notaryv1.GetInfoRequest]) (*connect.Response[notaryv1.GetInfoResponse], error) {
 	return connect.NewResponse(&notaryv1.GetInfoResponse{
-		Version:     version.Version,
-		PublicUrl:   baseURL(ctx),
-		AuthEnabled: s.auth != nil,
+		Version:      version.Version,
+		PublicUrl:    baseURL(ctx),
+		AuthEnabled:  s.auth != nil,
+		EmbeddedSync: s.embeddedSync(),
 	}), nil
 }
 
@@ -206,6 +284,18 @@ func (s registryService) registryFromInput(in *notaryv1.RegistryInput) (*store.R
 	if !r.UseCatalog && len(r.Repositories) == 0 {
 		return nil, invalid("enable catalog discovery or list at least one repository")
 	}
+	for _, err := range []error{
+		noNUL("name", r.Name),
+		noNUL("username", r.Username),
+		noNUL("password", r.Password),
+		noNUL("repositories", r.Repositories...),
+		noNUL("repository patterns", r.RepositoryPatterns...),
+		noNUL("tag patterns", r.TagPatterns...),
+	} {
+		if err != nil {
+			return nil, err
+		}
+	}
 	return r, nil
 }
 
@@ -236,7 +326,11 @@ func (s registryService) ListRegistries(ctx context.Context, _ *connect.Request[
 }
 
 func (s registryService) GetRegistry(ctx context.Context, req *connect.Request[notaryv1.GetRegistryRequest]) (*connect.Response[notaryv1.GetRegistryResponse], error) {
-	r, err := s.store.GetRegistry(ctx, int64(req.Msg.GetId()))
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
+	r, err := s.store.GetRegistry(ctx, id)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
@@ -248,12 +342,13 @@ func (s registryService) CreateRegistry(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
+	in.SyncRequested = true // index it right away
 	r, err := s.store.CreateRegistry(ctx, in)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	s.log.Info().Int64("registry_id", r.ID).Str("registry", r.Name).Msg("registry created")
-	s.indexer.Trigger(ctx, r.ID)
+	s.log.Info().Str("registry_id", r.ID).Str("registry", r.Name).Msg("registry created")
+	s.startSync(ctx, r.ID)
 	if r, err = s.store.GetRegistry(ctx, r.ID); err != nil {
 		return nil, s.toConnectError(err)
 	}
@@ -265,15 +360,18 @@ func (s registryService) UpdateRegistry(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	in.ID = int64(req.Msg.GetId())
+	if in.ID, err = requiredID("id", req.Msg.GetId()); err != nil {
+		return nil, err
+	}
 	// The password is write-only: unset keeps it, switching to anonymous clears it.
 	setPassword := req.Msg.GetRegistry().Password != nil || in.AuthType == store.AuthAnonymous
+	in.SyncRequested = true // the change may select other images
 	r, err := s.store.UpdateRegistry(ctx, in, setPassword)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	s.log.Info().Int64("registry_id", r.ID).Str("registry", r.Name).Msg("registry updated")
-	s.indexer.Trigger(ctx, r.ID)
+	s.log.Info().Str("registry_id", r.ID).Str("registry", r.Name).Msg("registry updated")
+	s.startSync(ctx, r.ID)
 	if r, err = s.store.GetRegistry(ctx, r.ID); err != nil {
 		return nil, s.toConnectError(err)
 	}
@@ -281,27 +379,41 @@ func (s registryService) UpdateRegistry(ctx context.Context, req *connect.Reques
 }
 
 func (s registryService) DeleteRegistry(ctx context.Context, req *connect.Request[notaryv1.DeleteRegistryRequest]) (*connect.Response[notaryv1.DeleteRegistryResponse], error) {
-	id := int64(req.Msg.GetId())
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
 	if err := s.store.DeleteRegistry(ctx, id); err != nil {
 		if errors.Is(err, store.ErrConflict) {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("registry is used by at least one repository; delete or move those first"))
 		}
 		return nil, s.toConnectError(err)
 	}
-	s.indexer.Forget(id)
-	s.log.Info().Int64("registry_id", id).Msg("registry deleted")
+	if s.indexer != nil {
+		s.indexer.Forget(id)
+	}
+	s.log.Info().Str("registry_id", id).Msg("registry deleted")
 	return connect.NewResponse(&notaryv1.DeleteRegistryResponse{}), nil
 }
 
 func (s registryService) SyncRegistry(ctx context.Context, req *connect.Request[notaryv1.SyncRegistryRequest]) (*connect.Response[notaryv1.SyncRegistryResponse], error) {
-	id := int64(req.Msg.GetId())
-	if _, err := s.store.GetRegistry(ctx, id); err != nil {
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
+	// The request is recorded first: with the embedded syncer the claim
+	// below clears it at once; without one, or while another instance is
+	// syncing the registry, it stays and the next syncer run picks it up.
+	if err := s.store.RequestSync(ctx, id); err != nil {
 		return nil, s.toConnectError(err)
 	}
-	s.indexer.Trigger(ctx, id)
+	s.startSync(ctx, id)
 	r, err := s.store.GetRegistry(ctx, id)
 	if err != nil {
 		return nil, s.toConnectError(err)
+	}
+	if r.SyncState != store.SyncSyncing {
+		s.log.Info().Str("registry_id", r.ID).Str("registry", r.Name).Bool("embedded_sync", s.embeddedSync()).Msg("sync requested")
 	}
 	return connect.NewResponse(&notaryv1.SyncRegistryResponse{Registry: registryToProto(r)}), nil
 }
@@ -327,7 +439,11 @@ func (s registryService) TestRegistry(ctx context.Context, req *connect.Request[
 		r.Username = strings.TrimSpace(in.GetUsername())
 		r.Password = in.GetPassword()
 		if in.Password == nil && req.Msg.Id != nil {
-			existing, err := s.store.GetRegistry(ctx, int64(req.Msg.GetId()))
+			id, err := requiredID("id", req.Msg.GetId())
+			if err != nil {
+				return nil, err
+			}
+			existing, err := s.store.GetRegistry(ctx, id)
 			if err != nil {
 				return nil, s.toConnectError(err)
 			}
@@ -348,34 +464,127 @@ func (s registryService) TestRegistry(ctx context.Context, req *connect.Request[
 
 type imageService struct{ *API }
 
-func (s imageService) ListImages(ctx context.Context, req *connect.Request[notaryv1.ListImagesRequest]) (*connect.Response[notaryv1.ListImagesResponse], error) {
-	f := store.ImageFilter{RegistryID: int64(req.Msg.GetRegistryId()), Query: strings.TrimSpace(req.Msg.GetQuery())}
-	switch req.Msg.GetKind() {
+// page converts the proto pagination fields; the store applies the
+// defaults and limits documented in the proto.
+func page(size, offset int32) store.Page {
+	return store.Page{Size: int(size), Offset: int(offset)}
+}
+
+// kindFilter maps the proto kind to the store's; unspecified means all.
+func kindFilter(k notaryv1.RefKind) string {
+	switch k {
 	case notaryv1.RefKind_REF_KIND_APP:
-		f.Kind = "app"
+		return store.KindApp
 	case notaryv1.RefKind_REF_KIND_RUNTIME:
-		f.Kind = "runtime"
+		return store.KindRuntime
+	default:
+		return ""
 	}
-	rows, err := s.store.ListImages(ctx, f)
+}
+
+func (s imageService) ListImages(ctx context.Context, req *connect.Request[notaryv1.ListImagesRequest]) (*connect.Response[notaryv1.ListImagesResponse], error) {
+	registryID, err := optionalID("registry_id", req.Msg.GetRegistryId())
+	if err != nil {
+		return nil, err
+	}
+	f := store.ImageFilter{
+		RegistryID:   registryID,
+		Query:        req.Msg.GetQuery(),
+		Kind:         kindFilter(req.Msg.GetKind()),
+		FlatpakID:    req.Msg.GetFlatpakId(),
+		Architecture: req.Msg.GetArchitecture(),
+	}
+	if err := textFields(namedText{"query", &f.Query}, namedText{"flatpak_id", &f.FlatpakID}, namedText{"architecture", &f.Architecture}); err != nil {
+		return nil, err
+	}
+	images, total, err := s.store.ListImages(ctx, f, page(req.Msg.GetPageSize(), req.Msg.GetOffset()))
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	out := make([]*notaryv1.Image, len(rows))
-	for i, row := range rows {
-		out[i] = imageToProto(row.Image, row.HasIcon)
+	return connect.NewResponse(&notaryv1.ListImagesResponse{Images: imagesToProto(images), TotalSize: int32(total)}), nil
+}
+
+func (s imageService) ListImageRepositories(ctx context.Context, req *connect.Request[notaryv1.ListImageRepositoriesRequest]) (*connect.Response[notaryv1.ListImageRepositoriesResponse], error) {
+	registryID, err := optionalID("registry_id", req.Msg.GetRegistryId())
+	if err != nil {
+		return nil, err
 	}
-	return connect.NewResponse(&notaryv1.ListImagesResponse{Images: out}), nil
+	query, err := textField("query", req.Msg.GetQuery())
+	if err != nil {
+		return nil, err
+	}
+	f := store.ImageRepositoryFilter{RegistryID: registryID, Query: query}
+	repos, total, err := s.store.ListImageRepositories(ctx, f, page(req.Msg.GetPageSize(), req.Msg.GetOffset()))
+	if err != nil {
+		return nil, s.toConnectError(err)
+	}
+	out := make([]*notaryv1.ImageRepository, len(repos))
+	for i, r := range repos {
+		out[i] = imageRepositoryToProto(r)
+	}
+	return connect.NewResponse(&notaryv1.ListImageRepositoriesResponse{Repositories: out, TotalSize: int32(total)}), nil
+}
+
+func (s imageService) ListPackages(ctx context.Context, req *connect.Request[notaryv1.ListPackagesRequest]) (*connect.Response[notaryv1.ListPackagesResponse], error) {
+	registryID, err := optionalID("registry_id", req.Msg.GetRegistryId())
+	if err != nil {
+		return nil, err
+	}
+	f := store.PackageFilter{
+		RegistryID:   registryID,
+		Query:        req.Msg.GetQuery(),
+		Kind:         kindFilter(req.Msg.GetKind()),
+		Architecture: req.Msg.GetArchitecture(),
+	}
+	if err := textFields(namedText{"query", &f.Query}, namedText{"architecture", &f.Architecture}); err != nil {
+		return nil, err
+	}
+	pkgs, total, err := s.store.ListPackages(ctx, f, page(req.Msg.GetPageSize(), req.Msg.GetOffset()))
+	if err != nil {
+		return nil, s.toConnectError(err)
+	}
+	out := make([]*notaryv1.Package, len(pkgs))
+	for i, p := range pkgs {
+		out[i] = packageToProto(p)
+	}
+	return connect.NewResponse(&notaryv1.ListPackagesResponse{Packages: out, TotalSize: int32(total)}), nil
+}
+
+func (s imageService) GetPackage(ctx context.Context, req *connect.Request[notaryv1.GetPackageRequest]) (*connect.Response[notaryv1.GetPackageResponse], error) {
+	kind := kindFilter(req.Msg.GetKind())
+	if kind == "" {
+		return nil, invalid("kind is required")
+	}
+	flatpakID := strings.TrimSpace(req.Msg.GetFlatpakId())
+	if flatpakID == "" {
+		return nil, invalid("flatpak_id is required")
+	}
+	if strings.IndexByte(flatpakID, 0) >= 0 {
+		// No stored flatpak id contains NUL (and Postgres rejects it as a
+		// parameter): such a package cannot exist. Not found rather than
+		// invalid, so a mangled package URL shows "package not found".
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("package %q not found", flatpakID))
+	}
+	pkg, variants, err := s.store.GetPackage(ctx, kind, flatpakID)
+	if err != nil {
+		return nil, s.toConnectError(err)
+	}
+	return connect.NewResponse(&notaryv1.GetPackageResponse{Package: packageToProto(pkg), Variants: imagesToProto(variants)}), nil
 }
 
 func (s imageService) GetImage(ctx context.Context, req *connect.Request[notaryv1.GetImageRequest]) (*connect.Response[notaryv1.GetImageResponse], error) {
-	row, err := s.store.GetImage(ctx, int64(req.Msg.GetId()))
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
+	img, err := s.store.GetImage(ctx, id)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
 	return connect.NewResponse(&notaryv1.GetImageResponse{
-		Image:    imageToProto(row.Image, row.HasIcon),
-		Labels:   strippedLabels(row.Labels),
-		Metadata: row.Labels["org.flatpak.metadata"],
+		Image:    imageToProto(img),
+		Labels:   strippedLabels(img.Labels),
+		Metadata: img.Labels[flatpakmeta.Label],
 	}), nil
 }
 
@@ -385,18 +594,18 @@ func (a *API) ServeIcon(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "sign in required", http.StatusUnauthorized)
 		return
 	}
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id, err := store.ParseID(r.PathValue("id"))
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	row, err := a.store.GetImage(r.Context(), id)
+	img, err := a.store.GetImage(r.Context(), id)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 	for _, k := range store.IconLabels {
-		v := row.Labels[k]
+		v := img.Labels[k]
 		if v == "" {
 			continue
 		}
@@ -440,8 +649,12 @@ func (s repositoryService) repositoryFromInput(in *notaryv1.RepositoryInput) (*s
 	if !slugRe.MatchString(slug) || strings.HasSuffix(slug, ".flatpakrepo") {
 		return nil, invalid("slug must match [a-z0-9][a-z0-9._-]* (max 63 characters)")
 	}
-	if in.GetRegistryId() == 0 {
+	if strings.TrimSpace(in.GetRegistryId()) == "" {
 		return nil, invalid("registry is required")
+	}
+	registryID, err := requiredID("registry_id", in.GetRegistryId())
+	if err != nil {
+		return nil, err
 	}
 	homepage := strings.TrimSpace(in.GetHomepage())
 	if homepage != "" && !strings.HasPrefix(homepage, "https://") && !strings.HasPrefix(homepage, "http://") {
@@ -449,19 +662,26 @@ func (s repositoryService) repositoryFromInput(in *notaryv1.RepositoryInput) (*s
 	}
 	sources := make([]store.Source, 0, len(in.GetSources()))
 	for _, src := range in.GetSources() {
-		sources = append(sources, store.Source{
+		s := store.Source{
 			RepositoryPattern: strings.TrimSpace(src.GetRepositoryPattern()),
 			RefPattern:        strings.TrimSpace(src.GetRefPattern()),
 			TagPattern:        strings.TrimSpace(src.GetTagPattern()),
 			Exclude:           src.GetExclude(),
-		})
+		}
+		if err := noNUL("sources", s.RepositoryPattern, s.RefPattern, s.TagPattern); err != nil {
+			return nil, err
+		}
+		sources = append(sources, s)
+	}
+	if err := noNUL("title, description and homepage", in.GetTitle(), in.GetDescription(), homepage); err != nil {
+		return nil, err
 	}
 	return &store.Repository{
 		Slug:        slug,
 		Title:       strings.TrimSpace(in.GetTitle()),
 		Description: strings.TrimSpace(in.GetDescription()),
 		Homepage:    homepage,
-		RegistryID:  int64(in.GetRegistryId()),
+		RegistryID:  registryID,
 		Sources:     sources,
 	}, nil
 }
@@ -469,29 +689,33 @@ func (s repositoryService) repositoryFromInput(in *notaryv1.RepositoryInput) (*s
 // registryImages loads images per registry for counting and previews.
 type registryImages struct {
 	s     *store.Store
-	cache map[int64][]store.ImageRow
+	cache map[string][]*store.Image
 }
 
-func (ri *registryImages) get(ctx context.Context, registryID int64) ([]store.ImageRow, error) {
-	if rows, ok := ri.cache[registryID]; ok {
-		return rows, nil
+func newRegistryImages(s *store.Store) *registryImages {
+	return &registryImages{s: s, cache: map[string][]*store.Image{}}
+}
+
+func (ri *registryImages) get(ctx context.Context, registryID string) ([]*store.Image, error) {
+	if images, ok := ri.cache[registryID]; ok {
+		return images, nil
 	}
-	rows, err := ri.s.ListImages(ctx, store.ImageFilter{RegistryID: registryID})
+	images, err := ri.s.RegistryImages(ctx, registryID, false)
 	if err != nil {
 		return nil, err
 	}
-	ri.cache[registryID] = rows
-	return rows, nil
+	ri.cache[registryID] = images
+	return images, nil
 }
 
 func (s repositoryService) toProto(ctx context.Context, ri *registryImages, p *store.Repository) (*notaryv1.Repository, error) {
-	rows, err := ri.get(ctx, p.RegistryID)
+	images, err := ri.get(ctx, p.RegistryID)
 	if err != nil {
 		return nil, err
 	}
 	n := 0
-	for _, row := range rows {
-		if flatpakindex.MatchSources(p.Sources, row.Image) {
+	for _, img := range images {
+		if flatpakindex.MatchSources(p.Sources, img) {
 			n++
 		}
 	}
@@ -499,7 +723,7 @@ func (s repositoryService) toProto(ctx context.Context, ri *registryImages, p *s
 }
 
 func (s repositoryService) one(ctx context.Context, p *store.Repository) (*notaryv1.Repository, error) {
-	out, err := s.toProto(ctx, &registryImages{s: s.store, cache: map[int64][]store.ImageRow{}}, p)
+	out, err := s.toProto(ctx, newRegistryImages(s.store), p)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
@@ -511,7 +735,7 @@ func (s repositoryService) ListRepositories(ctx context.Context, _ *connect.Requ
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	ri := &registryImages{s: s.store, cache: map[int64][]store.ImageRow{}}
+	ri := newRegistryImages(s.store)
 	out := make([]*notaryv1.Repository, len(repos))
 	for i, p := range repos {
 		if out[i], err = s.toProto(ctx, ri, p); err != nil {
@@ -522,7 +746,11 @@ func (s repositoryService) ListRepositories(ctx context.Context, _ *connect.Requ
 }
 
 func (s repositoryService) GetRepository(ctx context.Context, req *connect.Request[notaryv1.GetRepositoryRequest]) (*connect.Response[notaryv1.GetRepositoryResponse], error) {
-	p, err := s.store.GetRepository(ctx, int64(req.Msg.GetId()))
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
+	p, err := s.store.GetRepository(ctx, id)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
@@ -542,7 +770,7 @@ func (s repositoryService) CreateRepository(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	s.log.Info().Int64("repository_id", p.ID).Str("slug", p.Slug).Msg("repository created")
+	s.log.Info().Str("repository_id", p.ID).Str("slug", p.Slug).Msg("repository created")
 	out, err := s.one(ctx, p)
 	if err != nil {
 		return nil, err
@@ -555,12 +783,14 @@ func (s repositoryService) UpdateRepository(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	in.ID = int64(req.Msg.GetId())
+	if in.ID, err = requiredID("id", req.Msg.GetId()); err != nil {
+		return nil, err
+	}
 	p, err := s.store.UpdateRepository(ctx, in)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	s.log.Info().Int64("repository_id", p.ID).Str("slug", p.Slug).Msg("repository updated")
+	s.log.Info().Str("repository_id", p.ID).Str("slug", p.Slug).Msg("repository updated")
 	out, err := s.one(ctx, p)
 	if err != nil {
 		return nil, err
@@ -569,28 +799,29 @@ func (s repositoryService) UpdateRepository(ctx context.Context, req *connect.Re
 }
 
 func (s repositoryService) DeleteRepository(ctx context.Context, req *connect.Request[notaryv1.DeleteRepositoryRequest]) (*connect.Response[notaryv1.DeleteRepositoryResponse], error) {
-	id := int64(req.Msg.GetId())
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
 	if err := s.store.DeleteRepository(ctx, id); err != nil {
 		return nil, s.toConnectError(err)
 	}
-	s.log.Info().Int64("repository_id", id).Msg("repository deleted")
+	s.log.Info().Str("repository_id", id).Msg("repository deleted")
 	return connect.NewResponse(&notaryv1.DeleteRepositoryResponse{}), nil
 }
 
 func (s repositoryService) PreviewRepository(ctx context.Context, req *connect.Request[notaryv1.PreviewRepositoryRequest]) (*connect.Response[notaryv1.PreviewRepositoryResponse], error) {
-	p, err := s.store.GetRepository(ctx, int64(req.Msg.GetId()))
+	id, err := requiredID("id", req.Msg.GetId())
+	if err != nil {
+		return nil, err
+	}
+	p, err := s.store.GetRepository(ctx, id)
 	if err != nil {
 		return nil, s.toConnectError(err)
 	}
-	rows, err := s.store.ListImages(ctx, store.ImageFilter{RegistryID: p.RegistryID})
+	images, err := s.store.RegistryImages(ctx, p.RegistryID, false)
 	if err != nil {
 		return nil, s.toConnectError(err)
-	}
-	images := make([]*store.Image, len(rows))
-	hasIcon := map[int64]bool{}
-	for i, row := range rows {
-		images[i] = row.Image
-		hasIcon[row.ID] = row.HasIcon
 	}
 	var f flatpakindex.Filter
 	if a := strings.TrimSpace(req.Msg.GetArchitecture()); a != "" {
@@ -599,10 +830,25 @@ func (s repositoryService) PreviewRepository(ctx context.Context, req *connect.R
 	if t := strings.TrimSpace(req.Msg.GetTag()); t != "" {
 		f.Tags = []string{t}
 	}
+	// The selection (per-ref de-duplication) needs all images, so paginate
+	// the computed result in memory.
 	selected := flatpakindex.Select(p.Sources, f, images)
-	out := make([]*notaryv1.Image, len(selected))
-	for i, img := range selected {
-		out[i] = imageToProto(img, hasIcon[img.ID])
+	pg := store.Slice(selected, page(req.Msg.GetPageSize(), req.Msg.GetOffset()))
+
+	// Runtimes the selection needs but does not serve, and which other
+	// registries could provide them (over the whole selection, not the page).
+	missing := flatpakindex.MissingRuntimes(selected)
+	refs := make([]string, len(missing))
+	for i, m := range missing {
+		refs[i] = store.KindRuntime + "/" + m.Runtime
 	}
-	return connect.NewResponse(&notaryv1.PreviewRepositoryResponse{Images: out}), nil
+	providers, err := s.store.RefProviders(ctx, refs, p.RegistryID)
+	if err != nil {
+		return nil, s.toConnectError(err)
+	}
+	return connect.NewResponse(&notaryv1.PreviewRepositoryResponse{
+		Images:          imagesToProto(pg),
+		TotalSize:       int32(len(selected)),
+		MissingRuntimes: missingRuntimesToProto(missing, providers),
+	}), nil
 }

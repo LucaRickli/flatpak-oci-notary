@@ -10,64 +10,82 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import PageHeader from '$lib/components/page-header.svelte';
 	import SyncStateBadge from '$lib/components/sync-state-badge.svelte';
+	import SyncProgress from '$lib/components/sync-progress.svelte';
+	import SyncUpdatingNote from '$lib/components/sync-updating-note.svelte';
+	import ExternalSyncNote from '$lib/components/external-sync-note.svelte';
 	import ErrorAlert from '$lib/components/error-alert.svelte';
 	import StatCard from '$lib/components/stat-card.svelte';
-	import ImagesTable from '$lib/components/images-table.svelte';
-	import TableSkeleton from '$lib/components/table-skeleton.svelte';
+	import PaginatedTable from '$lib/components/paginated-table.svelte';
+	import PackagesTable from '$lib/components/packages-table.svelte';
 	import RegistryForm from '$lib/components/registry-form.svelte';
 	import ConfirmDelete from '$lib/components/confirm-delete.svelte';
 	import { imageClient, registryClient, SyncState } from '$lib/api';
 	import { Resource } from '$lib/resource.svelte';
+	import { onSyncEnded, poll } from '$lib/poll.svelte';
 	import { isNotFound, reportError } from '$lib/session.svelte';
 	import { setCrumb } from '$lib/breadcrumb.svelte';
-	import { startSync } from '$lib/sync';
+	import { isQueued, isQueuedBehind, isSyncing, POLL_LIST_MS, startSync, syncAction, syncPollInterval } from '$lib/sync';
+	import { DEFAULT_PAGE_SIZE, pageRequest } from '$lib/pagination';
 	import { formatDate, formatDuration, formatInterval, formatRelative } from '$lib/format';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import HourglassIcon from '@lucide/svelte/icons/hourglass';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 	import PackageSearchIcon from '@lucide/svelte/icons/package-search';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
 	let { data } = $props();
 
+	// Packages tab pagination. The page is overridable and goes back to 1 when another registry is shown.
+	let page = $derived.by(() => {
+		void data.id;
+		return 1;
+	});
+	let pageSize = $state(DEFAULT_PAGE_SIZE);
+
 	const resource = new Resource(async () => (await registryClient.getRegistry({ id: data.id })).registry);
-	const images = new Resource(async () => (await imageClient.listImages({ registryId: data.id })).images);
+	const packages = new Resource(async () => {
+		const registryId = data.id;
+		const res = await imageClient.listPackages({ registryId, ...pageRequest(page, pageSize) });
+		return { ...res, registryId };
+	});
 
 	// Ignore stale data from the previously viewed registry while the next one loads.
 	const registry = $derived(resource.current?.id === data.id ? resource.current : undefined);
-	const imageList = $derived(images.current?.every((i) => i.registryId === data.id) ? images.current : undefined);
-	const syncing = $derived(registry?.syncState === SyncState.SYNCING);
+	const packageList = $derived(packages.current?.registryId === data.id ? packages.current : undefined);
+	const syncing = $derived(!!registry && isSyncing(registry));
+	const queued = $derived(!!registry && isQueued(registry));
+	const action = $derived(syncAction(registry));
 
 	let tab = $state('packages');
 	let syncRequested = $state(false);
+	const syncDisabled = $derived(syncing || queued || syncRequested);
 
 	$effect(() => {
 		if (registry) setCrumb(registry.name);
 	});
 
-	// Poll while syncing; when a sync finishes, reload the images and report the outcome.
-	let pollingId: number | undefined;
-	$effect(() => {
-		const r = registry;
-		if (!r) return;
-		if (r.syncState !== SyncState.SYNCING) {
-			if (pollingId === r.id) {
-				pollingId = undefined;
-				images.refresh();
-				if (r.syncState === SyncState.ERROR) toast.error(`Sync of ${r.name} failed`, { description: r.lastSyncError });
-				else toast.success(`Sync of ${r.name} finished`, { description: `${r.imageCount} flatpak images indexed` });
-			}
-			return;
+	// Poll the registry: often while a sync runs or waits for a syncer, slowly otherwise, to notice
+	// syncs started elsewhere (scheduler, external syncer, another admin). While a sync runs, newly
+	// indexed repositories show up, so refresh the packages in the background too.
+	poll(() => syncPollInterval(registry ? [registry] : undefined), resource.poll);
+	poll(() => (syncing ? POLL_LIST_MS : undefined), packages.poll);
+
+	// When a sync ends (also one that started and finished between two polls), reload the
+	// packages and report the outcome.
+	onSyncEnded(
+		() => (registry ? [registry] : undefined),
+		(r) => {
+			packages.poll();
+			if (r.syncState === SyncState.ERROR) toast.error(`Sync of ${r.name} failed`, { description: r.lastSyncError });
+			else toast.success(`Sync of ${r.name} finished`, { description: `${r.imageCount} flatpak images indexed` });
 		}
-		pollingId = r.id;
-		const timer = setTimeout(resource.refresh, 2000);
-		return () => clearTimeout(timer);
-	});
+	);
 
 	async function sync() {
 		if (!registry) return;
 		syncRequested = true;
 		const updated = await startSync(registry);
-		if (updated) resource.current = updated;
+		if (updated && updated.id === data.id) resource.current = updated;
 		syncRequested = false;
 	}
 
@@ -84,6 +102,19 @@
 	}
 </script>
 
+{#snippet syncButton()}
+	<Button onclick={sync} disabled={syncDisabled} title={action.hint}>
+		{#if syncing || syncRequested}
+			<Spinner data-icon="inline-start" />
+		{:else if queued}
+			<HourglassIcon data-icon="inline-start" />
+		{:else}
+			<RefreshCwIcon data-icon="inline-start" />
+		{/if}
+		{action.label}
+	</Button>
+{/snippet}
+
 {#if resource.error}
 	{#if isNotFound(resource.error)}
 		<Empty.Root>
@@ -98,8 +129,8 @@
 	{/if}
 {:else if !registry}
 	<div class="flex flex-col gap-2">
-		<Skeleton class="h-8 w-64" />
-		<Skeleton class="h-4 w-48" />
+		<Skeleton class="h-8 w-64 max-w-full" />
+		<Skeleton class="h-4 w-48 max-w-full" />
 	</div>
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each { length: 4 }, i (i)}<Skeleton class="h-24 rounded-xl" />{/each}
@@ -108,10 +139,7 @@
 	<PageHeader title={registry.name}>
 		<span class="font-mono text-sm break-all text-muted-foreground">{registry.url}</span>
 		{#snippet actions()}
-			<Button onclick={sync} disabled={syncing || syncRequested}>
-				{#if syncing || syncRequested}<Spinner data-icon="inline-start" />{:else}<RefreshCwIcon data-icon="inline-start" />{/if}
-				{syncing ? 'Syncing…' : 'Sync now'}
-			</Button>
+			{@render syncButton()}
 			<ConfirmDelete
 				title="Delete {registry.name}?"
 				description="The registry and its indexed images are removed from the notary. Images on the registry itself are not touched."
@@ -134,12 +162,18 @@
 				<Card.Description>Status</Card.Description>
 				<Card.Title><SyncStateBadge {registry} /></Card.Title>
 			</Card.Header>
-			<Card.Content class="text-xs text-muted-foreground">
+			<Card.Content class="flex flex-col gap-2 text-xs text-muted-foreground">
+				<SyncProgress {registry} />
+				{#if queued || isQueuedBehind(registry)}
+					<span>{action.hint}</span>
+				{/if}
 				{#if registry.lastSyncAt}
-					<span title={formatDate(registry.lastSyncAt)}>Last sync {formatRelative(registry.lastSyncAt)}</span>
-					· took {formatDuration(registry.lastSyncDurationMs)}
-				{:else}
-					Not synced yet
+					<span>
+						<span title={formatDate(registry.lastSyncAt)}>Last sync {formatRelative(registry.lastSyncAt)}</span>
+						· took {formatDuration(registry.lastSyncDurationMs)}
+					</span>
+				{:else if !syncing}
+					<span>Not synced yet</span>
 				{/if}
 			</Card.Content>
 		</Card.Root>
@@ -150,45 +184,60 @@
 			{registry.repositories.length === 1 ? 'repository' : 'repositories'}
 		</StatCard>
 	</div>
+	<ExternalSyncNote />
 
 	<Tabs.Root bind:value={tab}>
 		<Tabs.List>
 			<Tabs.Trigger value="packages">Packages</Tabs.Trigger>
 			<Tabs.Trigger value="settings">Settings</Tabs.Trigger>
 		</Tabs.List>
-		<Tabs.Content value="packages" class="pt-2">
-			{#if images.error}
-				<ErrorAlert error={images.error} onretry={images.refresh} />
-			{:else if !imageList}
-				<Card.Root><Card.Content><TableSkeleton /></Card.Content></Card.Root>
-			{:else if imageList.length === 0}
-				<Empty.Root class="border border-dashed">
-					<Empty.Header>
-						<Empty.Media variant="icon"><PackageSearchIcon /></Empty.Media>
-						{#if registry.syncState === SyncState.NEVER || !registry.lastSyncAt}
-							<Empty.Title>Not synced yet</Empty.Title>
-							<Empty.Description>Sync the registry to index its flatpak images.</Empty.Description>
-						{:else}
-							<Empty.Title>No flatpak images found</Empty.Title>
-							<Empty.Description>
-								No indexed image carries the org.flatpak.ref label. Check the discovery settings: without
-								catalog support, repositories must be listed explicitly.
-							</Empty.Description>
+		<Tabs.Content value="packages" class="flex flex-col gap-3 pt-2">
+			{#if syncing}<SyncUpdatingNote />{/if}
+			<PaginatedTable
+				result={packageList}
+				loading={packages.loading}
+				error={packages.error}
+				onretry={packages.refresh}
+				bind:page
+				bind:pageSize
+			>
+				{#snippet children(res)}
+					<PackagesTable packages={res.packages} showRegistry={false} />
+				{/snippet}
+				{#snippet empty()}
+					<Empty.Root class="border border-dashed">
+						<Empty.Header>
+							<Empty.Media variant="icon">
+								{#if syncing}<Spinner />{:else}<PackageSearchIcon />{/if}
+							</Empty.Media>
+							{#if syncing}
+								<Empty.Title>Indexing…</Empty.Title>
+								<Empty.Description>Packages show up here as the sync indexes their repositories.</Empty.Description>
+							{:else if queued}
+								<Empty.Title>Sync queued</Empty.Title>
+								<Empty.Description>{action.hint}</Empty.Description>
+							{:else if registry.syncState === SyncState.NEVER || !registry.lastSyncAt}
+								<Empty.Title>Not synced yet</Empty.Title>
+								<Empty.Description>Sync the registry to index its flatpak images.</Empty.Description>
+							{:else}
+								<Empty.Title>No flatpak images found</Empty.Title>
+								<Empty.Description>
+									No indexed image carries the org.flatpak.ref label. Check the discovery settings: without
+									catalog support, repositories must be listed explicitly.
+								</Empty.Description>
+							{/if}
+						</Empty.Header>
+						{#if !syncing}
+							<Empty.Content class="flex-row flex-wrap justify-center">
+								{@render syncButton()}
+								<Button variant="outline" onclick={() => (tab = 'settings')}>Edit discovery settings</Button>
+							</Empty.Content>
 						{/if}
-					</Empty.Header>
-					<Empty.Content class="flex-row justify-center">
-						<Button onclick={sync} disabled={syncing || syncRequested}>
-							{#if syncing}<Spinner data-icon="inline-start" />{:else}<RefreshCwIcon data-icon="inline-start" />{/if}
-							{syncing ? 'Syncing…' : 'Sync now'}
-						</Button>
-						<Button variant="outline" onclick={() => (tab = 'settings')}>Edit discovery settings</Button>
-					</Empty.Content>
-				</Empty.Root>
-			{:else}
-				<Card.Root class="py-0">
-					<ImagesTable images={imageList} showRegistry={false} />
-				</Card.Root>
-				<div class="mt-3 flex justify-end">
+					</Empty.Root>
+				{/snippet}
+			</PaginatedTable>
+			{#if packageList?.totalSize}
+				<div class="flex justify-end">
 					<Button variant="link" href="/packages?registry={registry.id}">
 						Browse in Packages<ArrowRightIcon data-icon="inline-end" />
 					</Button>
@@ -201,7 +250,7 @@
 					{registry}
 					onsaved={(r) => {
 						resource.current = r;
-						images.refresh();
+						packages.refresh();
 					}}
 				/>
 			{/key}

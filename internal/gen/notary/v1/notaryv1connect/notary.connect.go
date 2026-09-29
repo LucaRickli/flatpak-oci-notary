@@ -73,6 +73,14 @@ const (
 	ImageServiceListImagesProcedure = "/notary.v1.ImageService/ListImages"
 	// ImageServiceGetImageProcedure is the fully-qualified name of the ImageService's GetImage RPC.
 	ImageServiceGetImageProcedure = "/notary.v1.ImageService/GetImage"
+	// ImageServiceListImageRepositoriesProcedure is the fully-qualified name of the ImageService's
+	// ListImageRepositories RPC.
+	ImageServiceListImageRepositoriesProcedure = "/notary.v1.ImageService/ListImageRepositories"
+	// ImageServiceListPackagesProcedure is the fully-qualified name of the ImageService's ListPackages
+	// RPC.
+	ImageServiceListPackagesProcedure = "/notary.v1.ImageService/ListPackages"
+	// ImageServiceGetPackageProcedure is the fully-qualified name of the ImageService's GetPackage RPC.
+	ImageServiceGetPackageProcedure = "/notary.v1.ImageService/GetPackage"
 	// RepositoryServiceListRepositoriesProcedure is the fully-qualified name of the RepositoryService's
 	// ListRepositories RPC.
 	RepositoryServiceListRepositoriesProcedure = "/notary.v1.RepositoryService/ListRepositories"
@@ -248,7 +256,8 @@ type RegistryServiceClient interface {
 	CreateRegistry(context.Context, *connect.Request[v1.CreateRegistryRequest]) (*connect.Response[v1.CreateRegistryResponse], error)
 	UpdateRegistry(context.Context, *connect.Request[v1.UpdateRegistryRequest]) (*connect.Response[v1.UpdateRegistryResponse], error)
 	DeleteRegistry(context.Context, *connect.Request[v1.DeleteRegistryRequest]) (*connect.Response[v1.DeleteRegistryResponse], error)
-	// Starts a sync in the background; poll GetRegistry for sync_state.
+	// Starts a sync in the background (embedded syncer) or records a sync
+	// request for the external syncer; poll GetRegistry for sync_state.
 	SyncRegistry(context.Context, *connect.Request[v1.SyncRegistryRequest]) (*connect.Response[v1.SyncRegistryResponse], error)
 	// Tests connectivity and credentials without saving.
 	TestRegistry(context.Context, *connect.Request[v1.TestRegistryRequest]) (*connect.Response[v1.TestRegistryResponse], error)
@@ -363,7 +372,8 @@ type RegistryServiceHandler interface {
 	CreateRegistry(context.Context, *connect.Request[v1.CreateRegistryRequest]) (*connect.Response[v1.CreateRegistryResponse], error)
 	UpdateRegistry(context.Context, *connect.Request[v1.UpdateRegistryRequest]) (*connect.Response[v1.UpdateRegistryResponse], error)
 	DeleteRegistry(context.Context, *connect.Request[v1.DeleteRegistryRequest]) (*connect.Response[v1.DeleteRegistryResponse], error)
-	// Starts a sync in the background; poll GetRegistry for sync_state.
+	// Starts a sync in the background (embedded syncer) or records a sync
+	// request for the external syncer; poll GetRegistry for sync_state.
 	SyncRegistry(context.Context, *connect.Request[v1.SyncRegistryRequest]) (*connect.Response[v1.SyncRegistryResponse], error)
 	// Tests connectivity and credentials without saving.
 	TestRegistry(context.Context, *connect.Request[v1.TestRegistryRequest]) (*connect.Response[v1.TestRegistryResponse], error)
@@ -475,6 +485,14 @@ func (UnimplementedRegistryServiceHandler) TestRegistry(context.Context, *connec
 type ImageServiceClient interface {
 	ListImages(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	GetImage(context.Context, *connect.Request[v1.GetImageRequest]) (*connect.Response[v1.GetImageResponse], error)
+	// Lists the distinct OCI repositories containing flatpak images, e.g. for
+	// picking packages when editing repository rules.
+	ListImageRepositories(context.Context, *connect.Request[v1.ListImageRepositoriesRequest]) (*connect.Response[v1.ListImageRepositoriesResponse], error)
+	// Lists packages: images grouped by flatpak ID and kind across
+	// architectures, branches, tags and registries.
+	ListPackages(context.Context, *connect.Request[v1.ListPackagesRequest]) (*connect.Response[v1.ListPackagesResponse], error)
+	// Returns one package and all its variants (images).
+	GetPackage(context.Context, *connect.Request[v1.GetPackageRequest]) (*connect.Response[v1.GetPackageResponse], error)
 }
 
 // NewImageServiceClient constructs a client for the notary.v1.ImageService service. By default, it
@@ -500,13 +518,34 @@ func NewImageServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(imageServiceMethods.ByName("GetImage")),
 			connect.WithClientOptions(opts...),
 		),
+		listImageRepositories: connect.NewClient[v1.ListImageRepositoriesRequest, v1.ListImageRepositoriesResponse](
+			httpClient,
+			baseURL+ImageServiceListImageRepositoriesProcedure,
+			connect.WithSchema(imageServiceMethods.ByName("ListImageRepositories")),
+			connect.WithClientOptions(opts...),
+		),
+		listPackages: connect.NewClient[v1.ListPackagesRequest, v1.ListPackagesResponse](
+			httpClient,
+			baseURL+ImageServiceListPackagesProcedure,
+			connect.WithSchema(imageServiceMethods.ByName("ListPackages")),
+			connect.WithClientOptions(opts...),
+		),
+		getPackage: connect.NewClient[v1.GetPackageRequest, v1.GetPackageResponse](
+			httpClient,
+			baseURL+ImageServiceGetPackageProcedure,
+			connect.WithSchema(imageServiceMethods.ByName("GetPackage")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // imageServiceClient implements ImageServiceClient.
 type imageServiceClient struct {
-	listImages *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
-	getImage   *connect.Client[v1.GetImageRequest, v1.GetImageResponse]
+	listImages            *connect.Client[v1.ListImagesRequest, v1.ListImagesResponse]
+	getImage              *connect.Client[v1.GetImageRequest, v1.GetImageResponse]
+	listImageRepositories *connect.Client[v1.ListImageRepositoriesRequest, v1.ListImageRepositoriesResponse]
+	listPackages          *connect.Client[v1.ListPackagesRequest, v1.ListPackagesResponse]
+	getPackage            *connect.Client[v1.GetPackageRequest, v1.GetPackageResponse]
 }
 
 // ListImages calls notary.v1.ImageService.ListImages.
@@ -519,10 +558,33 @@ func (c *imageServiceClient) GetImage(ctx context.Context, req *connect.Request[
 	return c.getImage.CallUnary(ctx, req)
 }
 
+// ListImageRepositories calls notary.v1.ImageService.ListImageRepositories.
+func (c *imageServiceClient) ListImageRepositories(ctx context.Context, req *connect.Request[v1.ListImageRepositoriesRequest]) (*connect.Response[v1.ListImageRepositoriesResponse], error) {
+	return c.listImageRepositories.CallUnary(ctx, req)
+}
+
+// ListPackages calls notary.v1.ImageService.ListPackages.
+func (c *imageServiceClient) ListPackages(ctx context.Context, req *connect.Request[v1.ListPackagesRequest]) (*connect.Response[v1.ListPackagesResponse], error) {
+	return c.listPackages.CallUnary(ctx, req)
+}
+
+// GetPackage calls notary.v1.ImageService.GetPackage.
+func (c *imageServiceClient) GetPackage(ctx context.Context, req *connect.Request[v1.GetPackageRequest]) (*connect.Response[v1.GetPackageResponse], error) {
+	return c.getPackage.CallUnary(ctx, req)
+}
+
 // ImageServiceHandler is an implementation of the notary.v1.ImageService service.
 type ImageServiceHandler interface {
 	ListImages(context.Context, *connect.Request[v1.ListImagesRequest]) (*connect.Response[v1.ListImagesResponse], error)
 	GetImage(context.Context, *connect.Request[v1.GetImageRequest]) (*connect.Response[v1.GetImageResponse], error)
+	// Lists the distinct OCI repositories containing flatpak images, e.g. for
+	// picking packages when editing repository rules.
+	ListImageRepositories(context.Context, *connect.Request[v1.ListImageRepositoriesRequest]) (*connect.Response[v1.ListImageRepositoriesResponse], error)
+	// Lists packages: images grouped by flatpak ID and kind across
+	// architectures, branches, tags and registries.
+	ListPackages(context.Context, *connect.Request[v1.ListPackagesRequest]) (*connect.Response[v1.ListPackagesResponse], error)
+	// Returns one package and all its variants (images).
+	GetPackage(context.Context, *connect.Request[v1.GetPackageRequest]) (*connect.Response[v1.GetPackageResponse], error)
 }
 
 // NewImageServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -544,12 +606,36 @@ func NewImageServiceHandler(svc ImageServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(imageServiceMethods.ByName("GetImage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	imageServiceListImageRepositoriesHandler := connect.NewUnaryHandler(
+		ImageServiceListImageRepositoriesProcedure,
+		svc.ListImageRepositories,
+		connect.WithSchema(imageServiceMethods.ByName("ListImageRepositories")),
+		connect.WithHandlerOptions(opts...),
+	)
+	imageServiceListPackagesHandler := connect.NewUnaryHandler(
+		ImageServiceListPackagesProcedure,
+		svc.ListPackages,
+		connect.WithSchema(imageServiceMethods.ByName("ListPackages")),
+		connect.WithHandlerOptions(opts...),
+	)
+	imageServiceGetPackageHandler := connect.NewUnaryHandler(
+		ImageServiceGetPackageProcedure,
+		svc.GetPackage,
+		connect.WithSchema(imageServiceMethods.ByName("GetPackage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/notary.v1.ImageService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ImageServiceListImagesProcedure:
 			imageServiceListImagesHandler.ServeHTTP(w, r)
 		case ImageServiceGetImageProcedure:
 			imageServiceGetImageHandler.ServeHTTP(w, r)
+		case ImageServiceListImageRepositoriesProcedure:
+			imageServiceListImageRepositoriesHandler.ServeHTTP(w, r)
+		case ImageServiceListPackagesProcedure:
+			imageServiceListPackagesHandler.ServeHTTP(w, r)
+		case ImageServiceGetPackageProcedure:
+			imageServiceGetPackageHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -565,6 +651,18 @@ func (UnimplementedImageServiceHandler) ListImages(context.Context, *connect.Req
 
 func (UnimplementedImageServiceHandler) GetImage(context.Context, *connect.Request[v1.GetImageRequest]) (*connect.Response[v1.GetImageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notary.v1.ImageService.GetImage is not implemented"))
+}
+
+func (UnimplementedImageServiceHandler) ListImageRepositories(context.Context, *connect.Request[v1.ListImageRepositoriesRequest]) (*connect.Response[v1.ListImageRepositoriesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notary.v1.ImageService.ListImageRepositories is not implemented"))
+}
+
+func (UnimplementedImageServiceHandler) ListPackages(context.Context, *connect.Request[v1.ListPackagesRequest]) (*connect.Response[v1.ListPackagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notary.v1.ImageService.ListPackages is not implemented"))
+}
+
+func (UnimplementedImageServiceHandler) GetPackage(context.Context, *connect.Request[v1.GetPackageRequest]) (*connect.Response[v1.GetPackageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("notary.v1.ImageService.GetPackage is not implemented"))
 }
 
 // RepositoryServiceClient is a client for the notary.v1.RepositoryService service.

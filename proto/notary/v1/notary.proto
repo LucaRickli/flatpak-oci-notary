@@ -6,6 +6,8 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/lucarickli/flatpak-oci-notary/internal/gen/notary/v1;notaryv1";
 
+// All ids are UUIDs (version 7) in their canonical string form.
+
 // SystemService exposes server info and the current session. GetInfo and
 // GetMe are available without authentication.
 service SystemService {
@@ -22,7 +24,8 @@ service RegistryService {
   rpc CreateRegistry(CreateRegistryRequest) returns (CreateRegistryResponse);
   rpc UpdateRegistry(UpdateRegistryRequest) returns (UpdateRegistryResponse);
   rpc DeleteRegistry(DeleteRegistryRequest) returns (DeleteRegistryResponse);
-  // Starts a sync in the background; poll GetRegistry for sync_state.
+  // Starts a sync in the background (embedded syncer) or records a sync
+  // request for the external syncer; poll GetRegistry for sync_state.
   rpc SyncRegistry(SyncRegistryRequest) returns (SyncRegistryResponse);
   // Tests connectivity and credentials without saving.
   rpc TestRegistry(TestRegistryRequest) returns (TestRegistryResponse);
@@ -32,6 +35,14 @@ service RegistryService {
 service ImageService {
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
   rpc GetImage(GetImageRequest) returns (GetImageResponse);
+  // Lists the distinct OCI repositories containing flatpak images, e.g. for
+  // picking packages when editing repository rules.
+  rpc ListImageRepositories(ListImageRepositoriesRequest) returns (ListImageRepositoriesResponse);
+  // Lists packages: images grouped by flatpak ID and kind across
+  // architectures, branches, tags and registries.
+  rpc ListPackages(ListPackagesRequest) returns (ListPackagesResponse);
+  // Returns one package and all its variants (images).
+  rpc GetPackage(GetPackageRequest) returns (GetPackageResponse);
 }
 
 // RepositoryService manages published flatpak repositories (indexes).
@@ -55,6 +66,10 @@ message GetInfoResponse {
   // Base URL used for generated remote URLs, e.g. "https://flatpak.example.com".
   string public_url = 2;
   bool auth_enabled = 3;
+  // Whether this server runs the sync scheduler itself. When false, syncs are
+  // run by a separate "notary sync" process (e.g. a Kubernetes CronJob) and
+  // SyncRegistry only records a request for it.
+  bool embedded_sync = 4;
 }
 
 message GetMeRequest {}
@@ -105,7 +120,7 @@ enum SyncState {
 }
 
 message Registry {
-  int32 id = 1;
+  string id = 1;
   string name = 2;
   // Base URL of the OCI registry, e.g. "https://ghcr.io".
   string url = 3;
@@ -135,6 +150,14 @@ message Registry {
   int32 repository_count = 18;
   google.protobuf.Timestamp created_at = 19;
   google.protobuf.Timestamp updated_at = 20;
+  // A sync was requested (SyncRegistry, or the registry was created/changed)
+  // and waits for a syncer to pick it up.
+  bool sync_requested = 21;
+  // Progress of the running sync (sync_state SYNCING). total is 0 while the
+  // repositories are still being discovered. Indexed repositories become
+  // visible while the sync runs.
+  int32 sync_repositories_done = 22;
+  int32 sync_repositories_total = 23;
 }
 
 message RegistryInput {
@@ -159,7 +182,7 @@ message ListRegistriesResponse {
 }
 
 message GetRegistryRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message GetRegistryResponse {
@@ -175,7 +198,7 @@ message CreateRegistryResponse {
 }
 
 message UpdateRegistryRequest {
-  int32 id = 1;
+  string id = 1;
   RegistryInput registry = 2;
 }
 
@@ -184,13 +207,13 @@ message UpdateRegistryResponse {
 }
 
 message DeleteRegistryRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message DeleteRegistryResponse {}
 
 message SyncRegistryRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message SyncRegistryResponse {
@@ -200,7 +223,7 @@ message SyncRegistryResponse {
 message TestRegistryRequest {
   RegistryInput registry = 1;
   // Set to reuse the stored password of an existing registry.
-  optional int32 id = 2;
+  optional string id = 2;
 }
 
 message TestRegistryResponse {
@@ -222,8 +245,8 @@ enum RefKind {
 }
 
 message Image {
-  int32 id = 1;
-  int32 registry_id = 2;
+  string id = 1;
+  string registry_id = 2;
   string registry_name = 3;
   // OCI repository path on the registry, e.g. "myorg/org.example.App".
   string repository = 4;
@@ -252,23 +275,136 @@ message Image {
   // Icon served at GET /icons/{id} when true.
   bool has_icon = 21;
   google.protobuf.Timestamp indexed_at = 22;
+  // From the flatpak metadata: the runtime this app (or extension/runtime)
+  // builds on, e.g. "org.fedoraproject.Platform/x86_64/f44"; empty if none.
+  string runtime = 23;
+  // For extensions: the ref they extend ([ExtensionOf] ref); empty otherwise.
+  string extension_of = 24;
+  // Installing downloads extra data from external URLs ([Extra Data]).
+  bool has_extra_data = 25;
 }
 
+// Pagination: page_size 0 means the default (50); values above 500 are
+// clamped to 500. offset is the number of items to skip. Responses carry the
+// total number of matching items so clients can render page numbers.
+
 message ListImagesRequest {
-  // 0 = all registries.
-  int32 registry_id = 1;
-  // Free-text search in ref, name and repository.
+  // Empty = all registries.
+  string registry_id = 1;
+  // Free-text search (case-insensitive) in ref, name, summary and repository.
   string query = 2;
   // Unspecified = all kinds.
   RefKind kind = 3;
+  // Exact flatpak ID, e.g. "org.example.App" (all arches and branches).
+  string flatpak_id = 4;
+  // Exact OCI architecture, e.g. "amd64". Empty = all.
+  string architecture = 5;
+  int32 page_size = 6;
+  int32 offset = 7;
 }
 
 message ListImagesResponse {
+  // Ordered by ref, then repository.
   repeated Image images = 1;
+  // Total number of images matching the filters (ignoring pagination).
+  int32 total_size = 2;
+}
+
+message ListImageRepositoriesRequest {
+  // Empty = all registries.
+  string registry_id = 1;
+  // Free-text search (case-insensitive) in repository, flatpak ID and name.
+  string query = 2;
+  int32 page_size = 3;
+  int32 offset = 4;
+}
+
+// An OCI repository containing flatpak images.
+message ImageRepository {
+  string registry_id = 1;
+  string registry_name = 2;
+  // OCI repository path, e.g. "myorg/org.example.App".
+  string repository = 3;
+  // Distinct flatpak IDs of its images, sorted.
+  repeated string flatpak_ids = 4;
+  // Appstream name of one of its images; may be empty.
+  string name = 5;
+  RefKind kind = 6;
+  int32 image_count = 7;
+  // Distinct OCI architectures, sorted.
+  repeated string architectures = 8;
+  // An image of this repository that has an icon (GET /icons/{id}); empty = none.
+  string icon_image_id = 9;
+}
+
+message ListImageRepositoriesResponse {
+  // Ordered by repository.
+  repeated ImageRepository repositories = 1;
+  int32 total_size = 2;
+}
+
+message RegistryRef {
+  string id = 1;
+  string name = 2;
+}
+
+// A flatpak (app or runtime) identified by kind + flatpak ID. Its images may
+// come from several registries and cover several architectures and branches.
+message Package {
+  RefKind kind = 1;
+  string flatpak_id = 2;
+  // Appstream name and summary of the newest variant; may be empty.
+  string name = 3;
+  string summary = 4;
+  // Version of the newest variant; may be empty.
+  string version = 5;
+  // Distinct OCI architectures, sorted.
+  repeated string architectures = 6;
+  // Distinct branches, sorted.
+  repeated string branches = 7;
+  // Registries providing the package, sorted by name.
+  repeated RegistryRef registries = 8;
+  int32 image_count = 9;
+  // A variant with an icon (GET /icons/{id}); empty = none.
+  string icon_image_id = 10;
+  // At least one variant downloads extra data on install.
+  bool has_extra_data = 11;
+  // Newest creation time among the variants.
+  google.protobuf.Timestamp updated = 12;
+}
+
+message ListPackagesRequest {
+  // Only packages with images in this registry; empty = all.
+  string registry_id = 1;
+  // Free-text search (case-insensitive) in flatpak ID, name and summary.
+  string query = 2;
+  // Unspecified = all kinds.
+  RefKind kind = 3;
+  // Only packages available for this OCI architecture; empty = all.
+  string architecture = 4;
+  int32 page_size = 5;
+  int32 offset = 6;
+}
+
+message ListPackagesResponse {
+  // Ordered by display name (name, falling back to flatpak ID), case-insensitive, then flatpak ID and kind.
+  repeated Package packages = 1;
+  int32 total_size = 2;
+}
+
+message GetPackageRequest {
+  RefKind kind = 1;
+  string flatpak_id = 2;
+}
+
+message GetPackageResponse {
+  Package package = 1;
+  // All images of the package, ordered by branch, architecture, registry name, repository.
+  repeated Image variants = 2;
 }
 
 message GetImageRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message GetImageResponse {
@@ -305,7 +441,7 @@ message RepositoryUrls {
 }
 
 message Repository {
-  int32 id = 1;
+  string id = 1;
   // URL-safe identifier: [a-z0-9][a-z0-9._-]*
   string slug = 2;
   string title = 3;
@@ -313,7 +449,7 @@ message Repository {
   string homepage = 5;
   // A repository serves images of exactly one upstream registry, because the
   // flatpak index format has a single "Registry" base URL.
-  int32 registry_id = 6;
+  string registry_id = 6;
   string registry_name = 7;
   repeated Source sources = 8;
   // Images matched by the sources (all arches and tags, before per-ref de-duplication).
@@ -328,7 +464,7 @@ message RepositoryInput {
   string title = 2;
   string description = 3;
   string homepage = 4;
-  int32 registry_id = 5;
+  string registry_id = 5;
   repeated Source sources = 6;
 }
 
@@ -339,7 +475,7 @@ message ListRepositoriesResponse {
 }
 
 message GetRepositoryRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message GetRepositoryResponse {
@@ -355,7 +491,7 @@ message CreateRepositoryResponse {
 }
 
 message UpdateRepositoryRequest {
-  int32 id = 1;
+  string id = 1;
   RepositoryInput repository = 2;
 }
 
@@ -364,19 +500,37 @@ message UpdateRepositoryResponse {
 }
 
 message DeleteRepositoryRequest {
-  int32 id = 1;
+  string id = 1;
 }
 
 message DeleteRepositoryResponse {}
 
 message PreviewRepositoryRequest {
-  int32 id = 1;
+  string id = 1;
   // OCI architecture; empty = all.
   string architecture = 2;
   // Like flatpak's "#tag" remote suffix; empty = all tags. Flatpak's default is "latest".
   string tag = 3;
+  int32 page_size = 4;
+  int32 offset = 5;
+}
+
+// A runtime needed by served images but not served by the repository itself;
+// clients need another remote providing it or the install fails.
+message MissingRuntime {
+  // Runtime ref without kind, e.g. "org.fedoraproject.Platform/x86_64/f44".
+  string runtime = 1;
+  // Flatpak IDs of the served images that need it, sorted.
+  repeated string needed_by = 2;
+  // Registries (other than the repository's) that have it indexed, if any.
+  repeated RegistryRef available_in = 3;
 }
 
 message PreviewRepositoryResponse {
+  // Ordered by ref, then repository.
   repeated Image images = 1;
+  // Total number of images the index would serve for these filters.
+  int32 total_size = 2;
+  // Computed over the whole selection (not just this page).
+  repeated MissingRuntime missing_runtimes = 3;
 }

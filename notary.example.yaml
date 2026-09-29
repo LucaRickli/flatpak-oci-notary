@@ -3,6 +3,7 @@
 # and dashes replaced by underscores, e.g. NOTARY_OIDC_CLIENT_SECRET.
 
 listen: ":8080"
+# Directory for the SQLite database (database.dsn overrides the file path).
 data-dir: /data
 # Externally visible base URL; used for remote URLs, .flatpakrepo files and the
 # OIDC redirect. Derived from each request when empty.
@@ -16,10 +17,42 @@ log:
   level: info      # trace, debug, info, warn, error
   format: json     # json or console
 
+database:
+  # sqlite (default; a single server, plus at most a "notary sync" process on
+  # the same host) or postgres (larger deployments, several replicas, split
+  # deployments).
+  driver: sqlite
+  # sqlite: file path, default <data-dir>/notary.db, on a local file system
+  # (never NFS/SMB).
+  # postgres: connection URL, e.g. postgres://notary:secret@db:5432/notary?sslmode=require
+  # (prefer NOTARY_DATABASE_DSN over writing the password into this file).
+  dsn: ""
+  # Postgres connection pool (per replica).
+  max-open-conns: 10   # 0 = unlimited
+  max-idle-conns: 5
+  conn-max-lifetime: 30m
+
 sync:
+  # Run the sync scheduler in the server. Set to false when a separate
+  # "notary sync" process (a CronJob or a "notary sync --watch" worker) syncs
+  # the registries against the same database; the server then only records
+  # sync requests for it. See the README, "Deployment modes".
+  enabled: true
   concurrency: 4   # OCI repositories indexed in parallel per registry
-  timeout: 30m
+  timeout: 30m     # per registry
   check-interval: 30s
+  # A registry sync is held through a lease in the database so only one
+  # process syncs it at a time. A registry left syncing by a dead process is
+  # retried after the lease expires.
+  lease: 2m
+  # Identity of this process in sync leases. It must be unique among the
+  # processes sharing the database (two processes with one identity release
+  # each other's live syncs), and when it survives restarts a restarted
+  # process releases the syncs it left running at once instead of waiting
+  # for the lease. Default: <hostname>:<listen port> for serve, and
+  # <hostname>:sync-<pid>-<random> for sync (new on every start). Never give
+  # several processes the same value, e.g. use the pod name.
+  # instance: notary-0
 
 auth:
   # Only for local development: disables admin authentication entirely.
@@ -37,6 +70,7 @@ oidc:
   groups-claim: groups
 
 session:
-  # At least 32 characters; random per start if empty (sessions end on restart).
+  # At least 32 characters; random per start if empty (sessions end on
+  # restart). All replicas must share the same secret.
   secret: ""
   ttl: 12h

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -47,6 +48,9 @@ type Handler struct {
 	mu         sync.Mutex
 	cache      map[string]*cached
 	cacheBytes int
+	// staleWarned is when serving from cache during a database outage was
+	// last logged (Unix nanoseconds), to rate-limit the warning.
+	staleWarned atomic.Int64
 }
 
 type cached struct {
@@ -56,15 +60,64 @@ type cached struct {
 	gz         []byte
 }
 
-// maxCacheBytes bounds the memory used for cached indexes (raw + gzip).
-const maxCacheBytes = 256 << 20
+const (
+	// maxCacheBytes bounds the memory used for cached indexes (raw + gzip
+	// + key and bookkeeping, see entryOverhead).
+	maxCacheBytes = 256 << 20
+	// maxCacheEntries bounds the number of cached indexes, whatever their
+	// size.
+	maxCacheEntries = 1024
+	// entryOverhead approximates the memory of a cache entry besides its
+	// bodies (map slot, struct, ETag).
+	entryOverhead = 256
+	// maxFilterValue bounds a tag, architecture or OS value of a cacheable
+	// request; flatpak sends short names.
+	maxFilterValue = 128
+)
 
 // cacheable reports whether a filter is worth caching. Only request shapes
-// flatpak itself sends are cached, so arbitrary query variations from
-// anonymous clients cannot fill the cache.
+// flatpak itself sends are cached (at most one plausible tag, architecture
+// and OS), so arbitrary query variations from anonymous clients cannot fill
+// the cache.
 func cacheable(f Filter) bool {
-	return len(f.LabelEquals) == 0 && len(f.Tags) <= 1 && len(f.Architectures) <= 1 && len(f.OS) <= 1 &&
-		(len(f.LabelExists) == 0 || (len(f.LabelExists) == 1 && f.LabelExists[0] == "org.flatpak.ref"))
+	if len(f.LabelEquals) != 0 || len(f.Tags) > 1 || len(f.Architectures) > 1 || len(f.OS) > 1 ||
+		!(len(f.LabelExists) == 0 || (len(f.LabelExists) == 1 && f.LabelExists[0] == "org.flatpak.ref")) {
+		return false
+	}
+	for _, values := range [][]string{f.Tags, f.Architectures, f.OS} {
+		for _, v := range values {
+			if !plausibleName(v) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// plausibleName reports whether v looks like a tag, architecture or OS
+// name: short, of letters, digits and ._- only.
+func plausibleName(v string) bool {
+	if v == "" || len(v) > maxFilterValue {
+		return false
+	}
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '.' || c == '_' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// cacheKey is the fixed-size cache key of a repository index request.
+func cacheKey(slug string, f Filter) string {
+	sum := sha256.Sum256([]byte(slug + "?" + f.CacheKey()))
+	return hex.EncodeToString(sum[:])
+}
+
+// entrySize is the memory a cache entry is accounted for.
+func entrySize(key string, c *cached) int {
+	return len(key) + len(c.raw) + len(c.gz) + entryOverhead
 }
 
 func NewHandler(s *store.Store, log zerolog.Logger, baseURL func(*http.Request) string, maxAge time.Duration) *Handler {
@@ -120,14 +173,29 @@ func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) index(ctx context.Context, slug string, f Filter) (*cached, error) {
-	gen := h.store.Generation()
-	key := slug + "?" + f.CacheKey()
-	h.mu.Lock()
-	if c, ok := h.cache[key]; ok && c.generation == gen {
+	key := cacheKey(slug, f)
+	// The generation lives in the database, so writes by other replicas
+	// invalidate this cache too.
+	gen, err := h.store.Generation(ctx)
+	known := err == nil
+	if !known {
+		if ctx.Err() != nil {
+			return nil, err
+		}
+		if c := h.fallback(key, err); c != nil {
+			return c, nil
+		}
+		// Not cached: build it anyway (without caching, the generation is
+		// unknown). That fails if the database is really down, and succeeds
+		// if it was only slow, e.g. behind a long write on SQLite.
+	} else {
+		h.mu.Lock()
+		if c, ok := h.cache[key]; ok && c.generation == gen {
+			h.mu.Unlock()
+			return c, nil
+		}
 		h.mu.Unlock()
-		return c, nil
 	}
-	h.mu.Unlock()
 
 	repo, err := h.store.GetRepositoryBySlug(ctx, slug)
 	if err != nil {
@@ -137,13 +205,9 @@ func (h *Handler) index(ctx context.Context, slug string, f Filter) (*cached, er
 	if err != nil {
 		return nil, err
 	}
-	rows, err := h.store.ListImages(ctx, store.ImageFilter{RegistryID: reg.ID, WithLabels: true})
+	images, err := h.store.RegistryImages(ctx, reg.ID, true)
 	if err != nil {
 		return nil, err
-	}
-	images := make([]*store.Image, len(rows))
-	for i, row := range rows {
-		images[i] = row.Image
 	}
 	raw, err := json.Marshal(Build(reg.URL, Select(repo.Sources, f, images)))
 	if err != nil {
@@ -158,27 +222,49 @@ func (h *Handler) index(ctx context.Context, slug string, f Filter) (*cached, er
 	sum := sha256.Sum256(raw)
 	c := &cached{generation: gen, etag: `"` + hex.EncodeToString(sum[:16]) + `"`, raw: raw, gz: gz.Bytes()}
 
-	if cacheable(f) {
+	if known && cacheable(f) {
 		h.remember(key, c)
 	}
 	return c, nil
 }
 
+// fallback returns the cached index at the last known generation when the
+// generation cannot be read (database unreachable or slow), or nil. While
+// the database is down no replica can change the data, so the entry is
+// still current.
+func (h *Handler) fallback(key string, err error) *cached {
+	last, ok := h.store.LastGeneration()
+	if !ok {
+		return nil
+	}
+	h.mu.Lock()
+	c, hit := h.cache[key]
+	h.mu.Unlock()
+	if !hit || c.generation != last {
+		return nil
+	}
+	now := time.Now().UnixNano()
+	if prev := h.staleWarned.Load(); now-prev > int64(10*time.Second) && h.staleWarned.CompareAndSwap(prev, now) {
+		h.log.Warn().Err(err).Msg("cannot read the index generation; serving cached indexes")
+	}
+	return c
+}
+
 func (h *Handler) remember(key string, c *cached) {
-	size := len(c.raw) + len(c.gz)
+	size := entrySize(key, c)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for k, v := range h.cache {
 		if v.generation != c.generation {
-			h.cacheBytes -= len(v.raw) + len(v.gz)
+			h.cacheBytes -= entrySize(k, v)
 			delete(h.cache, k)
 		}
 	}
 	if prev, ok := h.cache[key]; ok {
-		h.cacheBytes -= len(prev.raw) + len(prev.gz)
+		h.cacheBytes -= entrySize(key, prev)
 		delete(h.cache, key)
 	}
-	if h.cacheBytes+size > maxCacheBytes {
+	if h.cacheBytes+size > maxCacheBytes || len(h.cache) >= maxCacheEntries {
 		clear(h.cache)
 		h.cacheBytes = 0
 	}
